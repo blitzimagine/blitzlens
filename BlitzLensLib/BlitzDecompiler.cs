@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using SharpDisasm;
 
 namespace BlitzLensLib
 {
@@ -73,6 +74,9 @@ namespace BlitzLensLib
 				Exit("Failed to extract bbc file!", -2);
 
 			Logger.Info("Extracted bbc file!");
+
+			//byte[] code;
+			//Disassembler disasm = new Disassembler(code, ArchitectureMode.x86_32);
 
 			Exit();
 		}
