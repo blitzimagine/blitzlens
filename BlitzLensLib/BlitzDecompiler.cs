@@ -103,7 +103,10 @@ namespace BlitzLensLib
 
 				foreach (var pair in module.GetVariables())
 				{
-					sw.WriteLine(pair.Key + ": " + pair.Value);
+					sw.WriteLine(pair.Key + ":");
+					if (!pair.Value.StartsWith("    "))
+						sw.Write("    ");
+					sw.WriteLine(pair.Value);
 				}
 			}
 

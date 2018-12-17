@@ -168,6 +168,38 @@ namespace BlitzLensLib
 			return sb.ToString();
 		}
 
+		private bool IsArray(string name)
+		{
+			return name.StartsWith("_a") && name.Length > 2;
+		}
+
+		private string GetArrayString(byte[] data)
+		{
+			StringBuilder sb = new StringBuilder();
+			
+			using (MemoryStream ms = new MemoryStream(data))
+			using (BinaryReader br = new BinaryReader(ms))
+			{
+				uint ptr = br.ReadUInt32();
+				sb.AppendLine("    .dd 0x" + ptr.ToString("X8") + " ; Pointer");
+				DataType type = (DataType) br.ReadInt32();
+				sb.AppendLine("    .dd 0x" + ((int) type).ToString("X2") + " ; Type: " + type);
+				int dimensions = br.ReadInt32();
+				sb.AppendLine("    .dd 0x" + dimensions.ToString("X2") + " ; Dimensions: " + dimensions);
+				int scales = br.ReadInt32();
+				sb.AppendLine("    .dd 0x" + scales.ToString("X2") + " ; Scales");
+			}
+
+			/*for (int i = 0; i < data.Length; i++)
+			{
+				sb.Append("    .db 0x" + data[i].ToString("X2"));
+				if (i < data.Length - 1)
+					sb.AppendLine("    ");
+			}*/
+
+			return sb.ToString();
+		}
+
 		private string GetByteArrayString(byte[] data)
 		{
 			StringBuilder sb = new StringBuilder();
@@ -186,7 +218,6 @@ namespace BlitzLensLib
 		private string DisassembleLibsVar(byte[] data)
 		{
 			StringBuilder sb = new StringBuilder();
-			sb.AppendLine();
 
 			using (MemoryStream ms = new MemoryStream(data))
 			using (BinaryReader br = new BinaryReader(ms))
@@ -196,7 +227,7 @@ namespace BlitzLensLib
 					var dllName = br.ReadCString();
 					if (string.IsNullOrWhiteSpace(dllName))
 					{
-						sb.AppendLine("    .db 0x00");
+						sb.Append("    .db 0x00");
 						break;
 					}
 
@@ -248,7 +279,6 @@ namespace BlitzLensLib
 			//return ".db 0 ; TODO __DATA";
 
 			StringBuilder sb = new StringBuilder();
-			sb.AppendLine();
 
 			using (MemoryStream ms = new MemoryStream(data))
 			using (BinaryReader br = new BinaryReader(ms))
@@ -256,29 +286,35 @@ namespace BlitzLensLib
 				while (!br.Eof())
 				{
 					DataType type = (DataType) br.ReadInt32();
-					sb.AppendLine("    .dd 0x" + ((int)type).ToString("X2") + " ; " + type);
+					sb.Append("    .dd 0x" + ((int)type).ToString("X2") + " ; " + type);
 					
+					if (type != DataType.End)
+						sb.AppendLine();
+
 					switch (type)
 					{
 						case DataType.End:
-							break;
+							return sb.ToString();
 						case DataType.Integer:
-							sb.AppendLine("    .dd 0x" + br.ReadUInt32().ToString("X2"));
+							sb.Append("    .dd 0x" + br.ReadUInt32().ToString("X2"));
 							break;
 						case DataType.Float:
-							sb.AppendLine("    .dd 0x" + br.ReadSingle().ToString("X2"));
+							sb.Append("    .dd 0x" + br.ReadSingle().ToString("X2"));
 							break;
 						case DataType.CString:
 							uint cstringOff = br.ReadUInt32();
 							string sym = BBCCode.GetSymbolName(cstringOff) ?? "0x" + cstringOff.ToString("X2");
-							sb.AppendLine("    .dd " + sym);
+							sb.Append("    .dd " + sym);
 							break;
 						default:
 							uint val = br.ReadUInt32();
-							sb.AppendLine("    ; Invalid Type For __DATA: " + type + " =>" + val.ToString("X2"));
+							sb.Append("    ; Invalid Type For __DATA: " + type + " =>" + val.ToString("X2"));
 							Decompiler.Logger.Warn("Invalid Type For __DATA: " + type + " =>" + val.ToString("X2"));
 							break;
 					}
+
+					if (type != DataType.End)
+						sb.AppendLine();
 				}
 			}
 
@@ -289,8 +325,10 @@ namespace BlitzLensLib
 		{
 			byte[] data = GetVariableData(offset, size);
 
-			if (IsString(name))
+			if (IsString(name) && size > 1)
 				return GetString(data);
+			if (IsArray(name))
+				return GetArrayString(data);
 			if (name == "__LIBS")
 				return DisassembleLibsVar(data);
 			if (name == "__DATA")
