@@ -79,7 +79,7 @@ namespace BlitzLensLib
 			if (codeFile == null)
 				Exit("Failed to parse bbc file", -3);
 
-			Disassembler disasm = new Disassembler(codeFile?.GetCode(), ArchitectureMode.x86_32);
+			Disassembler disasm = new Disassembler(codeFile?.GetRelocatedCode(), ArchitectureMode.x86_32);
 
 			Exit("Done");
 		}

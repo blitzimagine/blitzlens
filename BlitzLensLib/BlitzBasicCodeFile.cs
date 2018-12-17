@@ -14,11 +14,16 @@ namespace BlitzLensLib
 		protected Dictionary<uint, string> RelativeRelocs;
 		protected Dictionary<uint, string> AbsoluteRelocs;
 
+		protected Dictionary<string, uint> Imports;
+
+		protected byte[] RelocatedCode;
+
 		private BlitzBasicCodeFile()
 		{
 			Symbols = new Dictionary<string, uint>();
 			RelativeRelocs = new Dictionary<uint, string>();
 			AbsoluteRelocs = new Dictionary<uint, string>();
+			Imports = new Dictionary<string, uint>();
 		}
 
 		public static BlitzBasicCodeFile FromBytes(byte[] bytes)
@@ -31,6 +36,8 @@ namespace BlitzLensLib
 				if (!result.Read(br))
 					return null;
 			}
+
+			result.ApplyRelocations();
 
 			return result;
 		}
@@ -72,10 +79,58 @@ namespace BlitzLensLib
 			return true;
 		}
 
-		public byte[] GetCode()
+		public void ApplyRelocations()
 		{
-			// TODO: Implement
-			return null;
+			RelocatedCode = new byte[RawCode.Length];
+			Array.Copy(RawCode, RelocatedCode, RawCode.Length);
+
+			foreach (var pair in RelativeRelocs)
+			{
+				uint offset = pair.Key;
+				string sym = pair.Value;
+				uint symOffset;
+				if (Symbols.ContainsKey(sym))
+					symOffset = Symbols[sym];
+				else
+					symOffset = GetImport(sym);
+				
+				RelocatedCode.SetUInt32((int)offset, symOffset);
+			}
+
+			foreach (var pair in AbsoluteRelocs)
+			{
+				uint offset = pair.Key;
+				string sym = pair.Value;
+				uint symOffset;
+				if (Symbols.ContainsKey(sym))
+					symOffset = Symbols[sym];
+				else
+					symOffset = GetImport(sym);
+
+				RelocatedCode.SetUInt32((int)offset, symOffset);
+			}
+		}
+
+		public uint GetImport(string symbol)
+		{
+			if (Imports.ContainsKey(symbol))
+				return Imports[symbol];
+
+			uint baseAddr = 0x10000000;
+			uint symAddr = baseAddr + ((uint) Imports.Count + 1) * 4;
+			Imports.Add(symbol, symAddr);
+
+			return symAddr;
+		}
+
+		public byte[] GetRelocatedCode()
+		{
+			return RelocatedCode;
+		}
+
+		public byte[] GetRawCode()
+		{
+			return RawCode;
 		}
 	}
 }

@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace BlitzLensLib
 {
-	public static class IOExtensions
+	public static class Extensions
 	{
 		public static string ReadCString(this BinaryReader br)
 		{
@@ -32,6 +32,16 @@ namespace BlitzLensLib
 		public static bool Eof(this BinaryReader br)
 		{
 			return br.BaseStream.Eof();
+		}
+
+		public static void SetUInt32(this byte[] self, int index, uint offset)
+		{
+			byte[] symBytes = BitConverter.GetBytes(offset);
+
+			self[index + 0] = symBytes[0];
+			self[index + 1] = symBytes[1];
+			self[index + 2] = symBytes[2];
+			self[index + 3] = symBytes[3];
 		}
 	}
 }

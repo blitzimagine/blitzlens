@@ -47,7 +47,7 @@
     <Compile Include="BlitzBasicCodeFile.cs" />
     <Compile Include="BlitzDecompiler.cs" />
     <Compile Include="BlitzUtils.cs" />
-    <Compile Include="IOExtensions.cs" />
+    <Compile Include="Extensions.cs" />
     <Compile Include="Logger.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ResourceHelper.cs" />
