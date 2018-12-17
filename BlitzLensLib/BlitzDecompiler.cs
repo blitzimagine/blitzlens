@@ -28,8 +28,12 @@ namespace BlitzLensLib
 		protected string InputPath;
 		protected string OutputPath;
 
+		private Dictionary<string, string> _disassembledFunctions;
+
 		public BlitzDecompiler(string inputPath, string outputPath)
 		{
+			_disassembledFunctions = new Dictionary<string, string>();
+
 			Logger = new Logger();
 			Logger.Logged += (level, msg) => Logged?.Invoke(level, msg);
 
@@ -79,10 +83,49 @@ namespace BlitzLensLib
 				Exit("Failed to parse bbc file", -3);
 
 			BlitzModule module = new BlitzModule(bbcCode);
-			string minimum2Asm = module.DisassembleFunction("__MAIN");
-			Logger.Debug(minimum2Asm);
+			Disassemble(module);
+
+			Directory.CreateDirectory(OutputPath);
+
+			using (StreamWriter sw = new StreamWriter(OutputPath + "test.asm"))
+			{
+				foreach (var func in module.GetKnownFunctions())
+				{
+					sw.WriteLine(_disassembledFunctions[func]);
+					string f = func;
+					//if (_disassembledFunctions.ContainsKey(func))
+					//	f += " - Done";
+					Logger.Debug(f);
+
+
+				}
+			}
 
 			Exit("Done");
+		}
+
+		private void Disassemble(BlitzModule module)
+		{
+			_disassembledFunctions.Add("__MAIN", module.DisassembleFunction("__MAIN"));
+
+			while (true)
+			{
+				int oldLen = module.GetKnownFunctions().Length;
+				foreach (var func in module.GetKnownFunctions())
+				{
+					if (!_disassembledFunctions.ContainsKey(func))
+					{
+
+						_disassembledFunctions.Add(func, module.DisassembleFunction(func));
+
+
+						//Logger.Warn(_disassembledFunctions[func]);
+					}
+				}
+
+				if (module.GetKnownFunctions().Length <= oldLen)
+					break;
+			}
 		}
 	}
 }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -11,26 +12,29 @@ namespace BlitzLensLib
 	public class BlitzModule
 	{
 		protected BlitzBasicCodeFile BBCCode;
+		protected List<string> KnownFunctions;
 
 		public BlitzModule(BlitzBasicCodeFile bbcCode)
 		{
 			BBCCode = bbcCode;
+			KnownFunctions = new List<string>();
 		}
 
 		public string DisassembleFunction(string symbol)
 		{
 			if (!BBCCode.ContainsSymbol(symbol))
 				return null;
+			if (!KnownFunctions.Contains(symbol))
+				KnownFunctions.Add(symbol);
 			return DisassembleFunction(BBCCode.GetSymbol(symbol));
 		}
 
-		public string DisassembleFunction(uint address)
+		public string DisassembleFunction(uint address = 0x0)
 		{
 			Disassembler disasm = new Disassembler(BBCCode?.GetRelocatedCode(),
 												   ArchitectureMode.x86_32,
 				address, false, Vendor.Any, address);
 			StringBuilder sb = new StringBuilder();
-			//sb.AppendLine("_off_" + address.ToString("X8") + ":");
 			string symbolName = BBCCode?.GetSymbolName(address);
 			if (symbolName == null)
 				symbolName = "_off_" + address.ToString("X8");
@@ -39,7 +43,8 @@ namespace BlitzLensLib
 			while (true)
 			{
 				Instruction inst = disasm.NextInstruction();
-				sb.AppendLine("    " + GetInstructionWithSymbols(inst));
+				string instStr = GetInstructionWithSymbols(inst);
+				sb.AppendLine("    " + instStr);
 
 				if (inst.Error)
 				{
@@ -47,16 +52,24 @@ namespace BlitzLensLib
 					break;
 				}
 
-				if (inst.Mnemonic == ud_mnemonic_code.UD_Ijmp)
+				/*if (inst.Mnemonic == ud_mnemonic_code.UD_Ijmp)
 				{
 					uint offset = (uint) inst.Operands[0].Value;
 					string func = DisassembleFunction(offset);
 					sb.AppendLine(func);
 
 					break;
+				}*/
+
+				if (inst.Mnemonic == ud_mnemonic_code.UD_Icall || inst.Mnemonic == ud_mnemonic_code.UD_Ijmp)
+				{
+					int index = instStr.IndexOf(' ');
+					string funcName = instStr.Substring(index).Trim();
+					if (!KnownFunctions.Contains(funcName) && BBCCode.ContainsSymbol(funcName))
+						KnownFunctions.Add(funcName);
 				}
 
-				if (inst.Mnemonic == ud_mnemonic_code.UD_Iret)
+				if (inst.Mnemonic == ud_mnemonic_code.UD_Iret || inst.Mnemonic == ud_mnemonic_code.UD_Ijmp)
 					break;
 			}
 
@@ -120,6 +133,11 @@ namespace BlitzLensLib
 				return null;
 
 			return originalLine.Replace(from, to);
+		}
+
+		public string[] GetKnownFunctions()
+		{
+			return KnownFunctions.ToArray();
 		}
 	}
 }
