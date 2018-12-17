@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -67,13 +68,11 @@ namespace BlitzLensLib
 		{
 			SetHeader("Initializing");
 
-			SetTask("Extracting bbc file from \"" + InputPath + "\"");
+			SetTask("Extracting bbc file from \"" + Path.GetFileName(InputPath) + "\"");
 
 			byte[] resource = BlitzUtils.GetBlitzCodeFromExecutable(InputPath);
 			if (resource == null)
 				Exit("Failed to extract bbc file", -2);
-
-			Logger.Info("Extracted bbc file!");
 
 			SetTask("Parsing bbc file");
 			BlitzBasicCodeFile codeFile = BlitzBasicCodeFile.FromBytes(resource);
