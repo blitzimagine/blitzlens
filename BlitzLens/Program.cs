@@ -91,7 +91,7 @@ namespace BlitzLens
 				Exit("Usage: blitzlens <inputfile> [outputdir]", -1);
 
 			string exePath = args[0];
-			string outputDirectory = exePath + "_dump/";
+			string outputDirectory = exePath + "_output/";
 			if (args.Length > 1)
 				outputDirectory = args[1];
 

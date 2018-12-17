@@ -21,7 +21,7 @@ namespace BlitzLensLib
 		public delegate void OnExited(string msg, int exitCode = 0);
 		public event OnExited Exited;
 
-		protected Logger Logger;
+		public Logger Logger { get; }
 		protected string Task;
 		protected string Header;
 
@@ -71,20 +71,27 @@ namespace BlitzLensLib
 		{
 			SetHeader("Initializing");
 
-			SetTask("Extracting bbc file from \"" + Path.GetFileName(InputPath) + "\"");
+			Logger.Info("Processing: \"" + Path.GetFileName(InputPath) + "\"");
 
+			SetTask("Extracting BBC Resource");
 			byte[] resource = BlitzUtils.GetBlitzCodeFromExecutable(InputPath);
 			if (resource == null)
-				Exit("Failed to extract bbc file", -2);
+				Exit("Failed to extract BBC resource", -2);
 
-			SetTask("Parsing bbc file");
-			BlitzBasicCodeFile bbcCode = BlitzBasicCodeFile.FromBytes(resource);
+			SetTask("Parsing BBC Resource");
+			BlitzBasicCodeFile bbcCode = BlitzBasicCodeFile.FromBytes(this, resource);
 			if (bbcCode == null)
-				Exit("Failed to parse bbc file", -3);
+				Exit("Failed to parse BBC resource", -3);
 
-			BlitzModule module = new BlitzModule(bbcCode);
+			BlitzModule module = new BlitzModule(this, bbcCode);
+
+			SetTask("Disassembling");
 			Disassemble(module);
 
+			SetTask("Decompiling");
+			Decompile(module);
+
+			SetTask("Writing Output");
 			Directory.CreateDirectory(OutputPath);
 
 			using (StreamWriter sw = new StreamWriter(OutputPath + "test.asm"))
@@ -92,12 +99,11 @@ namespace BlitzLensLib
 				foreach (var func in module.GetKnownFunctions())
 				{
 					sw.WriteLine(_disassembledFunctions[func]);
-					string f = func;
-					//if (_disassembledFunctions.ContainsKey(func))
-					//	f += " - Done";
-					Logger.Debug(f);
+				}
 
-
+				foreach (var pair in module.GetVariables())
+				{
+					sw.WriteLine(pair.Key + ": " + pair.Value);
 				}
 			}
 
@@ -114,18 +120,19 @@ namespace BlitzLensLib
 				foreach (var func in module.GetKnownFunctions())
 				{
 					if (!_disassembledFunctions.ContainsKey(func))
-					{
-
 						_disassembledFunctions.Add(func, module.DisassembleFunction(func));
-
-
-						//Logger.Warn(_disassembledFunctions[func]);
-					}
 				}
 
 				if (module.GetKnownFunctions().Length <= oldLen)
 					break;
 			}
+
+			module.ProcessVariables();
+		}
+
+		private void Decompile(BlitzModule module)
+		{
+
 		}
 	}
 }

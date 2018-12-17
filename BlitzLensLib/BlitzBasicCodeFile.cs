@@ -9,6 +9,8 @@ namespace BlitzLensLib
 {
 	public class BlitzBasicCodeFile
 	{
+		protected BlitzDecompiler Decompiler;
+
 		protected byte[] RawCode;
 		protected Dictionary<string, uint> Symbols;
 		protected Dictionary<uint, string> RelativeRelocs;
@@ -18,17 +20,21 @@ namespace BlitzLensLib
 
 		protected byte[] RelocatedCode;
 
-		private BlitzBasicCodeFile()
+		public uint CodeSize => (uint)RelocatedCode.Length;
+
+		private BlitzBasicCodeFile(BlitzDecompiler decompiler)
 		{
 			Symbols = new Dictionary<string, uint>();
 			RelativeRelocs = new Dictionary<uint, string>();
 			AbsoluteRelocs = new Dictionary<uint, string>();
 			Imports = new Dictionary<string, uint>();
+
+			Decompiler = decompiler;
 		}
 
-		public static BlitzBasicCodeFile FromBytes(byte[] bytes)
+		public static BlitzBasicCodeFile FromBytes(BlitzDecompiler decompiler, byte[] bytes)
 		{
-			BlitzBasicCodeFile result = new BlitzBasicCodeFile();
+			BlitzBasicCodeFile result = new BlitzBasicCodeFile(decompiler);
 			
 			using (MemoryStream ms = new MemoryStream(bytes))
 			using (BinaryReader br = new BinaryReader(ms))
@@ -201,6 +207,43 @@ namespace BlitzLensLib
 			return null;
 		}
 
+		public string[] GetOrderedVarSymbols()
+		{
+			List<Symbol> syms = new List<Symbol>();
+
+			foreach (var pair in AbsoluteRelocs)
+			{
+				string symbol = pair.Value;
+				bool skip = false;
+				foreach (var s in syms)
+				{
+					if (s.Name == symbol)
+					{
+						skip = true;
+						break;
+					}
+				}
+
+				if (skip)
+					continue;
+				
+				// when creating an import here, maybe separate it since it's a var?
+				uint addr = Symbols.ContainsKey(symbol) ? Symbols[symbol] : GetOrCreateImport(symbol);
+
+				Symbol sym = new Symbol(symbol, addr);
+				syms.Add(sym);
+			}
+
+			syms.Sort((x, y) => x.Address.CompareTo(y.Address));
+
+			List<string> result = new List<string>();
+			foreach (Symbol sym in syms)
+			{
+				result.Add(sym.Name);
+			}
+			return result.ToArray();
+		}
+
 		public byte[] GetRelocatedCode()
 		{
 			return RelocatedCode;
@@ -209,6 +252,18 @@ namespace BlitzLensLib
 		public byte[] GetRawCode()
 		{
 			return RawCode;
+		}
+
+		private class Symbol
+		{
+			public readonly string Name;
+			public readonly uint Address;
+
+			public Symbol(string name, uint address)
+			{
+				Name = name;
+				Address = address;
+			}
 		}
 	}
 }
