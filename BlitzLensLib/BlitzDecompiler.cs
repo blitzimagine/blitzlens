@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using SharpDisasm;
 
 namespace BlitzLensLib
 {
@@ -75,11 +74,13 @@ namespace BlitzLensLib
 				Exit("Failed to extract bbc file", -2);
 
 			SetTask("Parsing bbc file");
-			BlitzBasicCodeFile codeFile = BlitzBasicCodeFile.FromBytes(resource);
-			if (codeFile == null)
+			BlitzBasicCodeFile bbcCode = BlitzBasicCodeFile.FromBytes(resource);
+			if (bbcCode == null)
 				Exit("Failed to parse bbc file", -3);
 
-			Disassembler disasm = new Disassembler(codeFile?.GetRelocatedCode(), ArchitectureMode.x86_32);
+			BlitzModule module = new BlitzModule(bbcCode);
+			string minimum2Asm = module.DisassembleFunction(0xF30C);//"_fupdategame");
+			Logger.Debug(minimum2Asm);
 
 			Exit("Done");
 		}

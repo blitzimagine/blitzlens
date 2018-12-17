@@ -92,7 +92,7 @@ namespace BlitzLensLib
 				if (Symbols.ContainsKey(sym))
 					symOffset = Symbols[sym];
 				else
-					symOffset = GetImport(sym);
+					symOffset = GetOrCreateImport(sym);
 				
 				RelocatedCode.SetUInt32((int)offset, symOffset);
 			}
@@ -105,13 +105,13 @@ namespace BlitzLensLib
 				if (Symbols.ContainsKey(sym))
 					symOffset = Symbols[sym];
 				else
-					symOffset = GetImport(sym);
+					symOffset = GetOrCreateImport(sym);
 
 				RelocatedCode.SetUInt32((int)offset, symOffset);
 			}
 		}
 
-		public uint GetImport(string symbol)
+		private uint GetOrCreateImport(string symbol)
 		{
 			if (Imports.ContainsKey(symbol))
 				return Imports[symbol];
@@ -121,6 +121,78 @@ namespace BlitzLensLib
 			Imports.Add(symbol, symAddr);
 
 			return symAddr;
+		}
+
+		public bool ContainsImport(string symbol)
+		{
+			return Imports.ContainsKey(symbol);
+		}
+
+		public uint GetImport(string symbol)
+		{
+			return Imports[symbol];
+		}
+
+		public string[] GetImports()
+		{
+			return Imports.Keys.ToArray();
+		}
+
+		public string GetImportName(uint address)
+		{
+			foreach (var pair in Imports)
+			{
+				if (pair.Value == address)
+					return pair.Key;
+			}
+
+			return null;
+		}
+
+		public bool ContainsSymbol(string symbol)
+		{
+			return Symbols.ContainsKey(symbol);
+		}
+
+		public uint GetSymbol(string symbol)
+		{
+			return Symbols[symbol];
+		}
+
+		public string[] GetSymbols()
+		{
+			return Symbols.Keys.ToArray();
+		}
+
+		public string GetSymbolName(uint address)
+		{
+			foreach (var pair in Symbols)
+			{
+				if (pair.Value == address)
+					return pair.Key;
+			}
+
+			return null;
+		}
+
+		public string GetAnyName(uint address)
+		{
+			if (Symbols.ContainsValue(address))
+				return GetSymbolName(address);
+			else if (Imports.ContainsValue(address))
+				return GetImportName(address);
+
+			return null;
+		}
+
+		public string GetRelocSymbol(uint address)
+		{
+			if (RelativeRelocs.ContainsKey(address))
+				return RelativeRelocs[address];
+			if (AbsoluteRelocs.ContainsKey(address))
+				return AbsoluteRelocs[address];
+
+			return null;
 		}
 
 		public byte[] GetRelocatedCode()

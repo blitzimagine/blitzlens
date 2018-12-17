@@ -46,6 +46,7 @@
   <ItemGroup>
     <Compile Include="BlitzBasicCodeFile.cs" />
     <Compile Include="BlitzDecompiler.cs" />
+    <Compile Include="BlitzModule.cs" />
     <Compile Include="BlitzUtils.cs" />
     <Compile Include="Extensions.cs" />
     <Compile Include="Logger.cs" />
