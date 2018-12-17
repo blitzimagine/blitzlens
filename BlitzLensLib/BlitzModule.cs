@@ -63,7 +63,7 @@ namespace BlitzLensLib
 			return sb.ToString();
 		}
 
-		private string GetInstructionWithSymbols(Instruction instruction)
+		private string GetInstructionWithSymbols(Instruction instruction, bool commentOriginal = false)
 		{
 			StringBuilder sb = new StringBuilder();
 
@@ -91,22 +91,35 @@ namespace BlitzLensLib
 			for (int i = 0; i < instruction.Operands.Length; i++)
 			{
 				Operand op = instruction.Operands[i];
-				string opText = GetOperandText(opOffsets[i], op) ?? operands[i].Trim();
+				string opText = GetOperandText(opOffsets[i], operands[i].Trim(), op) ?? operands[i].Trim();
 				sb.Append(opText);
 				
 				if (i < instruction.Operands.Length - 1)
 					sb.Append(", ");
 			}
 
-			sb.Append(" ; " + instString);
+			if (commentOriginal)
+				sb.Append(" ; " + instString);
 
 			return sb.ToString();
 		}
 
-		private string GetOperandText(uint offset, Operand operand)
+		private string GetOperandText(uint offset, string originalLine, Operand operand)
 		{
-			// TODO: Handle operands where there are multiple words such as "dword symbolname"
-			return BBCCode.GetRelocSymbol(offset);
+			// This should work for all cases. HOPEFULLY!
+			string from = "0x" + operand.Value.ToString("X").ToLower();
+			string to = BBCCode.GetAbsRelocSymbol(offset);
+			if (to == null)
+			{
+				uint opSize = (uint)operand.Size / 8;
+				from = "0x" + (offset + operand.Value + opSize).ToString("X").ToLower();
+				to = BBCCode.GetRelRelocSymbol(offset);
+			}
+
+			if (to == null)
+				return null;
+
+			return originalLine.Replace(from, to);
 		}
 	}
 }

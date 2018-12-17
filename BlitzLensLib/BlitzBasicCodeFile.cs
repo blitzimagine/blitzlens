@@ -185,10 +185,16 @@ namespace BlitzLensLib
 			return null;
 		}
 
-		public string GetRelocSymbol(uint address)
+		public string GetRelRelocSymbol(uint address)
 		{
 			if (RelativeRelocs.ContainsKey(address))
 				return RelativeRelocs[address];
+
+			return null;
+		}
+
+		public string GetAbsRelocSymbol(uint address)
+		{
 			if (AbsoluteRelocs.ContainsKey(address))
 				return AbsoluteRelocs[address];
 

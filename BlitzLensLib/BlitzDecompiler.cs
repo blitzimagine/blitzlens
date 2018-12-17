@@ -79,7 +79,7 @@ namespace BlitzLensLib
 				Exit("Failed to parse bbc file", -3);
 
 			BlitzModule module = new BlitzModule(bbcCode);
-			string minimum2Asm = module.DisassembleFunction(0xF30C);//"_fupdategame");
+			string minimum2Asm = module.DisassembleFunction("__MAIN");
 			Logger.Debug(minimum2Asm);
 
 			Exit("Done");
