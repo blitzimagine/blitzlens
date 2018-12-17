@@ -67,18 +67,22 @@ namespace BlitzLensLib
 		{
 			SetHeader("Initializing");
 
-			SetTask("Extracting bbc file from \"" + InputPath + "\"...");
+			SetTask("Extracting bbc file from \"" + InputPath + "\"");
 
 			byte[] resource = BlitzUtils.GetBlitzCodeFromExecutable(InputPath);
 			if (resource == null)
-				Exit("Failed to extract bbc file!", -2);
+				Exit("Failed to extract bbc file", -2);
 
 			Logger.Info("Extracted bbc file!");
 
-			//byte[] code;
-			//Disassembler disasm = new Disassembler(code, ArchitectureMode.x86_32);
+			SetTask("Parsing bbc file");
+			BlitzBasicCodeFile codeFile = BlitzBasicCodeFile.FromBytes(resource);
+			if (codeFile == null)
+				Exit("Failed to parse bbc file", -3);
 
-			Exit();
+			Disassembler disasm = new Disassembler(codeFile?.GetCode(), ArchitectureMode.x86_32);
+
+			Exit("Done");
 		}
 	}
 }
