@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -368,7 +369,11 @@ namespace BlitzLensLib
 			while (true)
 			{
 				Instruction inst = disasm.NextInstruction();
+				//if (inst.Offset == 0xA1EF)
+				//	Debugger.Break();
 				string instStr = GetInstructionWithSymbols(inst);
+				//sb.AppendLine("    " + instStr + " ; " + inst);
+
 				sb.AppendLine("    " + instStr);
 
 				if (inst.Error)
@@ -407,10 +412,12 @@ namespace BlitzLensLib
 
 			string instString = instruction.ToString();
 			int index = instString.IndexOf(' ');
+			string instName;
 			if (index == -1)
-				sb.Append(instString + " ");
+				instName = instString;
 			else
-				sb.Append(instString.Substring(0, index) + " ");
+				instName = instString.Substring(0, index);
+			sb.Append(instName + " ");
 
 			string[] operands = new string[0];
 			if (index != -1)
@@ -421,15 +428,21 @@ namespace BlitzLensLib
 			uint[] opOffsets = new uint[instruction.Operands.Length];
 			for (int i = opOffsets.Length - 1; i >= 0; i--)
 			{
+				// TODO: Get operand size correctly instead of this
 				uint opSize = (uint) instruction.Operands[i].Size / 8;
 				lastOffset = lastOffset - opSize;
 				opOffsets[i] = lastOffset;
 			}
 
+			if (instName == "ret")
+				sb.Append("word ");
+
 			for (int i = 0; i < instruction.Operands.Length; i++)
 			{
 				Operand op = instruction.Operands[i];
 				string opText = GetOperandText(opOffsets[i], operands[i].Trim(), op) ?? operands[i].Trim();
+				if (instName == "shl" && i == 1)
+					sb.Append("byte ");
 				sb.Append(opText);
 				
 				if (i < instruction.Operands.Length - 1)
