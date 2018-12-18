@@ -20,8 +20,7 @@ namespace BlitzLensLib
 
 		public delegate void OnExited(string msg, int exitCode = 0);
 		public event OnExited Exited;
-
-		public Logger Logger { get; }
+		
 		protected string Task;
 		protected string Header;
 
@@ -33,8 +32,7 @@ namespace BlitzLensLib
 		public BlitzDecompiler(string inputPath, string outputPath)
 		{
 			_disassembledFunctions = new Dictionary<string, string>();
-
-			Logger = new Logger();
+			
 			Logger.Logged += (level, msg) => Logged?.Invoke(level, msg);
 
 			InputPath = inputPath;
@@ -76,12 +74,12 @@ namespace BlitzLensLib
 			SetTask("Extracting BBC Resource");
 			byte[] resource = BlitzUtils.GetBlitzCodeFromExecutable(InputPath);
 			if (resource == null)
-				Exit("Failed to extract BBC resource", -2);
+				Exit("Failed to extract BBC resource", 2);
 
 			SetTask("Parsing BBC Resource");
 			BlitzBasicCodeFile bbcCode = BlitzBasicCodeFile.FromBytes(this, resource);
 			if (bbcCode == null)
-				Exit("Failed to parse BBC resource", -3);
+				Exit("Failed to parse BBC resource", 3);
 
 			BlitzModule module = new BlitzModule(this, bbcCode);
 
@@ -98,7 +96,8 @@ namespace BlitzLensLib
 			{
 				foreach (var func in module.GetKnownFunctions())
 				{
-					sw.WriteLine(_disassembledFunctions[func]);
+					if (_disassembledFunctions.ContainsKey(func))
+						sw.WriteLine(_disassembledFunctions[func]);
 				}
 
 				foreach (var pair in module.GetVariables())
@@ -115,7 +114,15 @@ namespace BlitzLensLib
 
 		private void Disassemble(BlitzModule module)
 		{
-			_disassembledFunctions.Add("__MAIN", module.DisassembleFunction("__MAIN"));
+			Dictionary<string, string> doneFuncs = new Dictionary<string, string>();
+
+			_disassembledFunctions.Add("__MAIN", module.DisassembleFunction("__MAIN", ref doneFuncs, false));
+
+			foreach (var func2 in doneFuncs)
+			{
+				if (!_disassembledFunctions.ContainsKey(func2.Key))
+					_disassembledFunctions.Add(func2.Key, func2.Value);
+			}
 
 			while (true)
 			{
@@ -123,14 +130,31 @@ namespace BlitzLensLib
 				foreach (var func in module.GetKnownFunctions())
 				{
 					if (!_disassembledFunctions.ContainsKey(func))
-						_disassembledFunctions.Add(func, module.DisassembleFunction(func));
+					{
+						doneFuncs.Clear();
+						_disassembledFunctions.Add(func, module.DisassembleFunction(func, ref doneFuncs, false));
+
+						foreach (var func2 in doneFuncs)
+						{
+							if (!_disassembledFunctions.ContainsKey(func2.Key))
+								_disassembledFunctions.Add(func2.Key, func2.Value);
+						}
+					}
 				}
 
 				if (module.GetKnownFunctions().Length <= oldLen)
 					break;
 			}
 
+			SetTask("Processing Variables");
 			module.ProcessVariables();
+			foreach (var pair in module.GetVariables())
+			{
+				// TEMP: Figure out why variables are sometimes decompiled too
+				string name = pair.Key;
+				if (_disassembledFunctions.ContainsKey(name))
+					_disassembledFunctions.Remove(name);
+			}
 		}
 
 		private void Decompile(BlitzModule module)

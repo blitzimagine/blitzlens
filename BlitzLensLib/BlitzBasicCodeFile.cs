@@ -207,6 +207,16 @@ namespace BlitzLensLib
 			return null;
 		}
 
+		public Dictionary<uint, string> GetAbsRelocs()
+		{
+			return AbsoluteRelocs;
+		}
+
+		public Dictionary<uint, string> GetRelRelocs()
+		{
+			return RelativeRelocs;
+		}
+
 		public string[] GetOrderedVarSymbols()
 		{
 			List<Symbol> syms = new List<Symbol>();
@@ -252,6 +262,18 @@ namespace BlitzLensLib
 		public byte[] GetRawCode()
 		{
 			return RawCode;
+		}
+
+		public byte[] GetData(uint offset, uint size)
+		{
+			byte[] data = new byte[size];
+			byte[] relocatedCode = GetRelocatedCode();
+			for (uint i = 0; i < size; i++)
+			{
+				data[i] = relocatedCode[offset + i];
+			}
+
+			return data;
 		}
 
 		private class Symbol
