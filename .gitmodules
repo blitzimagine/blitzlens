@@ -1,0 +1,3 @@
+[submodule "libs/sharpdisasm"]
+	path = libs/sharpdisasm
+	url = https://gitlab.com/humangamer/sharpdisasm
