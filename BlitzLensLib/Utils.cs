@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace BlitzLensLib
 {
@@ -211,22 +209,21 @@ namespace BlitzLensLib
 
 			byte[] data = code.GetData(offset, size);
 
-			if (Utils.IsString(name) && size > 1)
-				return Utils.GetString(data);
-			if (Utils.IsArray(name))
-				return Utils.GetArrayString(data);
+			if (IsString(name) && size > 1)
+				return GetString(data);
+			if (IsArray(name))
+				return GetArrayString(data);
 			if (name == "__LIBS")
-				return Utils.DisassembleLibsVar(data, code, ref libs);
+				return DisassembleLibsVar(data, code, ref libs);
 			if (name == "__DATA")
-				return Utils.DisassembleDataVar(data, code);
-			else if (size == 1)
+				return DisassembleDataVar(data, code);
+			if (size == 1)
 				return ".db 0x" + data[0].ToString("X2");
-			else if (size == 2)
+			if (size == 2)
 				return ".dw 0x" + BitConverter.ToInt16(data, 0).ToString("X2");
-			else if (size == 4)
+			if (size == 4)
 				return ".dd 0x" + BitConverter.ToInt32(data, 0).ToString("X2");
-			else
-				return Utils.GetByteArrayString(data);
+			return GetByteArrayString(data);
 		}
 
 		public static string GetSizePrefix(int size)
@@ -253,6 +250,6 @@ namespace BlitzLensLib
 		String = 0x03,
 		CString = 0x04,
 		Obj = 0x05,
-		Vec = 0x06,
+		Vec = 0x06
 	}
 }
