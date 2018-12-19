@@ -34,8 +34,10 @@ namespace BlitzLensLib
 		{
 			Logger.Logged += (level, msg) => Logged?.Invoke(level, msg);
 
-			InputPath = inputPath;
-			OutputPath = outputPath;
+			InputPath = inputPath.Replace('\\', '/');
+			OutputPath = outputPath.Replace('\\', '/');
+			if (!OutputPath.EndsWith("/"))
+				OutputPath += "/";
 		}
 
 		internal void SetTask(string task)
@@ -98,6 +100,8 @@ namespace BlitzLensLib
 
 			using (StreamWriter sw = new StreamWriter(OutputPath + "disassembly.asm"))
 			{
+				Logger.Info(("Writing: " + Path.GetFileName(OutputPath) + "disassembly.asm").Indent());
+
 				sw.WriteLine("; Disassembled by BlitzLens");
 				sw.WriteLine();
 
@@ -167,6 +171,7 @@ namespace BlitzLensLib
 
 		private void SaveDecompiledCode(string file, ref Dictionary<string, string> code)
 		{
+			Logger.Info(("Writing: " + Path.GetFileName(OutputPath) + file).Indent());
 			using (StreamWriter sw = new StreamWriter(OutputPath + file))
 			{
 				sw.WriteLine("; Decompiled by BlitzLens");
