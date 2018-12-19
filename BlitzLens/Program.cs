@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -92,7 +93,7 @@ namespace BlitzLens
 				Exit("Usage: blitzlens <inputfile> [outputdir]", -1);
 
 			string exePath = args[0];
-			string outputDirectory = exePath + "_output/";
+			string outputDirectory = Path.ChangeExtension(exePath, null) + "_output/";
 			if (args.Length > 1)
 				outputDirectory = args[1];
 
