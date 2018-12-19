@@ -11,7 +11,7 @@ namespace BlitzLensLib.Decompilers
 {
 	public class BlitzDisassembler
 	{
-		protected BlitzLens Decompiler;
+		protected BlitzLens BlitzLens;
 
 		protected CodeResource BBCCode;
 		protected Dictionary<string, string> Variables;
@@ -37,13 +37,13 @@ namespace BlitzLensLib.Decompilers
 
 		private readonly Dictionary<uint, string> _disassembly;
 
-		public BlitzDisassembler(BlitzLens decompiler, CodeResource bbcCode, bool applySymbols = true, bool commentOriginal = false)
+		public BlitzDisassembler(BlitzLens blitzLens, CodeResource bbcCode, bool applySymbols = true, bool commentOriginal = false)
 		{
 			Variables = new Dictionary<string, string>();
 			Libs = new Dictionary<string, Dictionary<string, string>>();
 			_disassembly = new Dictionary<uint, string>();
 
-			Decompiler = decompiler;
+			BlitzLens = blitzLens;
 			BBCCode = bbcCode;
 			_commentOriginal = commentOriginal;
 			_applySymbols = applySymbols;

@@ -32,7 +32,6 @@ namespace BlitzLensLib
 
 		public BlitzLens(string inputPath, string outputPath)
 		{
-			
 			Logger.Logged += (level, msg) => Logged?.Invoke(level, msg);
 
 			InputPath = inputPath;
@@ -81,16 +80,18 @@ namespace BlitzLensLib
 			if (bbcCode == null)
 				Exit("Failed to parse BBC resource", 3);
 
-			BlitzDisassembler module = new BlitzDisassembler(this, bbcCode, true);
+			BlitzDisassembler disassembler = new BlitzDisassembler(this, bbcCode, true);
 
 			SetTask("Disassembling Variables");
-			DisassembleVariables(module);
+			DisassembleVariables(disassembler);
 
 			SetTask("Disassembling Code");
-			DisassembleCode(module);
+			DisassembleCode(disassembler);
+
+			BlitzDecompiler decompiler = new BlitzDecompiler(this, disassembler);
 
 			SetTask("Decompiling");
-			Decompile(module);
+			Decompile(decompiler);
 
 			SetTask("Writing Output");
 			Directory.CreateDirectory(OutputPath);
@@ -98,7 +99,7 @@ namespace BlitzLensLib
 			using (StreamWriter sw = new StreamWriter(OutputPath + "test.asm"))
 			{
 				bool first = true;
-				foreach (var pair in module.GetDisassembly())
+				foreach (var pair in disassembler.GetDisassembly())
 				{
 					string name = bbcCode?.GetSymbolName(pair.Key);
 					if (first)
@@ -113,7 +114,7 @@ namespace BlitzLensLib
 
 				sw.WriteLine();
 
-				foreach (var pair in module.GetVariables())
+				foreach (var pair in disassembler.GetVariables())
 				{
 					sw.WriteLine(pair.Key + ":");
 					if (!pair.Value.StartsWith("    "))
@@ -135,9 +136,9 @@ namespace BlitzLensLib
 			module.ProcessVariables();
 		}
 
-		private void Decompile(BlitzDisassembler module)
+		private void Decompile(BlitzDecompiler decompiler)
 		{
-			// TODO: Decompile back to BlitzBasic
+			decompiler.Decompile();
 		}
 	}
 }

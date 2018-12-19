@@ -41,6 +41,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Decompilers\BlitzDecompiler.cs" />
     <Compile Include="Structures\CodeResource.cs" />
     <Compile Include="BlitzLens.cs" />
     <Compile Include="Decompilers\BlitzDisassembler.cs" />
