@@ -2,14 +2,13 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using BlitzLensLib.Utils;
 
-namespace BlitzLensLib
+namespace BlitzLensLib.Structures
 {
-	public class BlitzBasicCodeResource
+	public class CodeResource
 	{
-		protected BlitzDecompiler Decompiler;
+		protected BlitzLens Decompiler;
 
 		protected byte[] RawCode;
 		protected Dictionary<string, uint> Symbols;
@@ -25,7 +24,7 @@ namespace BlitzLensLib
 
 		public uint CodeSize => (uint)RelocatedCode.Length;
 
-		private BlitzBasicCodeResource(BlitzDecompiler decompiler)
+		private CodeResource(BlitzLens decompiler)
 		{
 			Symbols = new Dictionary<string, uint>();
 			SymbolNames = new Dictionary<uint, string>();
@@ -38,9 +37,9 @@ namespace BlitzLensLib
 			Decompiler = decompiler;
 		}
 
-		public static BlitzBasicCodeResource FromBytes(BlitzDecompiler decompiler, byte[] bytes)
+		public static CodeResource FromBytes(BlitzLens decompiler, byte[] bytes)
 		{
-			BlitzBasicCodeResource result = new BlitzBasicCodeResource(decompiler);
+			CodeResource result = new CodeResource(decompiler);
 			
 			using (MemoryStream ms = new MemoryStream(bytes))
 			using (BinaryReader br = new BinaryReader(ms))

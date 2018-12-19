@@ -6,12 +6,12 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BlitzLensLib
+namespace BlitzLensLib.Utils
 {
 	// From: https://stackoverflow.com/questions/45624557/c-sharp-extract-resource-from-native-pe
-	public static class ResourceHelper
+	internal static class ResourceHelper
 	{
-		[System.Flags]
+		[Flags]
 		[SuppressMessage("ReSharper", "InconsistentNaming")]
 		[SuppressMessage("ReSharper", "UnusedMember.Local")]
 		[SuppressMessage("ReSharper", "UnusedMember.Global")]
@@ -78,6 +78,11 @@ namespace BlitzLensLib
 				FreeLibrary(hModule);
 			}
 			return null;
+		}
+
+		public static byte[] GetBlitzCodeFromExecutable(string filename)
+		{
+			return ResourceHelper.GetResourceFromExecutable(filename, "#1111", "#10");
 		}
 	}
 }

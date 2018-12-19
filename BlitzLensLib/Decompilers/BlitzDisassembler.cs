@@ -1,20 +1,19 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
+using BlitzLensLib.Structures;
+using BlitzLensLib.Utils;
 using SharpDisasm;
 using SharpDisasm.Udis86;
 
-namespace BlitzLensLib
+namespace BlitzLensLib.Decompilers
 {
-	public class BlitzModule
+	public class BlitzDisassembler
 	{
-		protected BlitzDecompiler Decompiler;
+		protected BlitzLens Decompiler;
 
-		protected BlitzBasicCodeResource BBCCode;
+		protected CodeResource BBCCode;
 		protected Dictionary<string, string> Variables;
 
 		protected Dictionary<string, Dictionary<string, string>> Libs;
@@ -38,7 +37,7 @@ namespace BlitzLensLib
 
 		private readonly Dictionary<uint, string> _disassembly;
 
-		public BlitzModule(BlitzDecompiler decompiler, BlitzBasicCodeResource bbcCode, bool applySymbols = true, bool commentOriginal = false)
+		public BlitzDisassembler(BlitzLens decompiler, CodeResource bbcCode, bool applySymbols = true, bool commentOriginal = false)
 		{
 			Variables = new Dictionary<string, string>();
 			Libs = new Dictionary<string, Dictionary<string, string>>();
@@ -101,7 +100,7 @@ namespace BlitzLensLib
 					continue;
 				uint offset = BBCCode.GetSymbol(sym);
 				uint size = pair.Value;
-				Variables.Add(pair.Key, Utils.DisassembleVariable(sym, BBCCode, offset, size, ref Libs));
+				Variables.Add(pair.Key, DisassemblyUtil.DisassembleVariable(sym, BBCCode, offset, size, ref Libs));
 			}
 		}
 
@@ -135,7 +134,7 @@ namespace BlitzLensLib
 			}
 		}
 
-		public static string GetInstructionString(BlitzModule module, Instruction instruction, bool commentOriginal = false, bool applySymbols = true)
+		public static string GetInstructionString(BlitzDisassembler module, Instruction instruction, bool commentOriginal = false, bool applySymbols = true)
 		{
 			StringBuilder sb = new StringBuilder();
 
@@ -163,7 +162,7 @@ namespace BlitzLensLib
 				if (applySymbols)
 					opText = ApplyRelocToOperand(module, instruction, i, opText);
 
-				sb.Append(Utils.GetSizePrefix(instruction.Operands[i]));
+				sb.Append(DisassemblyUtil.GetSizePrefix(instruction.Operands[i]));
 				sb.Append(opText);
 
 				if (i < instruction.Operands.Length - 1)
@@ -176,7 +175,7 @@ namespace BlitzLensLib
 			return sb.ToString();
 		}
 
-		private static string ApplyRelocToOperand(BlitzModule module, Instruction inst, int operandIndex, string originalLine)
+		private static string ApplyRelocToOperand(BlitzDisassembler module, Instruction inst, int operandIndex, string originalLine)
 		{
 			string newLine = originalLine;
 
@@ -235,7 +234,7 @@ namespace BlitzLensLib
 			return newLine;
 		}
 
-		public BlitzBasicCodeResource GetCode()
+		public CodeResource GetCode()
 		{
 			return BBCCode;
 		}

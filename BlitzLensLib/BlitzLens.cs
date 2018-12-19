@@ -4,10 +4,13 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using BlitzLensLib.Decompilers;
+using BlitzLensLib.Structures;
+using BlitzLensLib.Utils;
 
 namespace BlitzLensLib
 {
-	public class BlitzDecompiler
+	public class BlitzLens
 	{
 		public delegate void OnLogged(LogLevel level, string msg);
 		public event OnLogged Logged;
@@ -27,7 +30,7 @@ namespace BlitzLensLib
 		protected string InputPath;
 		protected string OutputPath;
 
-		public BlitzDecompiler(string inputPath, string outputPath)
+		public BlitzLens(string inputPath, string outputPath)
 		{
 			
 			Logger.Logged += (level, msg) => Logged?.Invoke(level, msg);
@@ -69,16 +72,16 @@ namespace BlitzLensLib
 			Logger.Info("Processing: \"" + Path.GetFileName(InputPath) + "\"");
 
 			SetTask("Extracting BBC Resource");
-			byte[] resource = BlitzUtils.GetBlitzCodeFromExecutable(InputPath);
+			byte[] resource = ResourceHelper.GetBlitzCodeFromExecutable(InputPath);
 			if (resource == null)
 				Exit("Failed to extract BBC resource", 2);
 
 			SetTask("Parsing BBC Resource");
-			BlitzBasicCodeResource bbcCode = BlitzBasicCodeResource.FromBytes(this, resource);
+			CodeResource bbcCode = CodeResource.FromBytes(this, resource);
 			if (bbcCode == null)
 				Exit("Failed to parse BBC resource", 3);
 
-			BlitzModule module = new BlitzModule(this, bbcCode, true);
+			BlitzDisassembler module = new BlitzDisassembler(this, bbcCode, true);
 
 			SetTask("Disassembling Variables");
 			DisassembleVariables(module);
@@ -122,17 +125,17 @@ namespace BlitzLensLib
 			Exit("Done");
 		}
 
-		private void DisassembleCode(BlitzModule module)
+		private void DisassembleCode(BlitzDisassembler module)
 		{
 			module.Disassemble();
 		}
 
-		private void DisassembleVariables(BlitzModule module)
+		private void DisassembleVariables(BlitzDisassembler module)
 		{
 			module.ProcessVariables();
 		}
 
-		private void Decompile(BlitzModule module)
+		private void Decompile(BlitzDisassembler module)
 		{
 			// TODO: Decompile back to BlitzBasic
 		}

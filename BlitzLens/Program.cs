@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using BlitzLensLib;
+using BlitzLensLib.Utils;
 
 namespace BlitzLens
 {
@@ -95,7 +96,7 @@ namespace BlitzLens
 			if (args.Length > 1)
 				outputDirectory = args[1];
 
-			BlitzDecompiler decompiler = new BlitzDecompiler(exePath, outputDirectory);
+			BlitzLensLib.BlitzLens decompiler = new BlitzLensLib.BlitzLens(exePath, outputDirectory);
 			decompiler.Exited += Exit;
 			decompiler.Logged += DecompilerOnLogged;
 			decompiler.HeaderSet += SetHeader;
