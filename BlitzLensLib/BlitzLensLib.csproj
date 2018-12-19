@@ -42,9 +42,11 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Decompilers\BlitzDecompiler.cs" />
+    <Compile Include="Structures\ASMInstruction.cs" />
     <Compile Include="Structures\CodeResource.cs" />
     <Compile Include="BlitzLens.cs" />
     <Compile Include="Decompilers\BlitzDisassembler.cs" />
+    <Compile Include="Decompilers\Handlers\InstructionTokenizer.cs" />
     <Compile Include="Utils\Extensions.cs" />
     <Compile Include="Utils\Logger.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

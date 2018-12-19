@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using BlitzLensLib.Decompilers.Handlers;
 using BlitzLensLib.Structures;
 using BlitzLensLib.Utils;
 
@@ -30,23 +31,21 @@ namespace BlitzLensLib.Decompilers
 
 		public void Decompile()
 		{
-			List<uint> offsets = Disassembler.GetDisassembly().Keys.ToList();
-			List<string> instructions = Disassembler.GetDisassembly().Values.ToList();
+			InstructionTokenizer tokenizer = new InstructionTokenizer(Disassembler.GetDisassembly());
+
+			StringBuilder sb = new StringBuilder();
 
 			string currentFile = null;
 			string currentFunction = null;
 			string currentLabel = null;
-
-			StringBuilder sb = new StringBuilder();
-
+			
 			try
 			{
-				int count = Disassembler.GetDisassembly().Count;
-				for (int i = 0; i < count; i++)
+				while (tokenizer.HasNext())
 				{
-					uint offset = offsets[i];
+					ASMInstruction inst = tokenizer.NextInstruction();
 
-					string label = Disassembler.GetCode().GetSymbolName(offset);
+					string label = Disassembler.GetCode().GetSymbolName(inst.Offset);
 					if (label != null)
 					{
 						currentLabel = label;
@@ -60,21 +59,21 @@ namespace BlitzLensLib.Decompilers
 					}
 
 					if (currentLabel == null)
-						currentLabel = "ERROR_LABEL_" + offset;
+						currentLabel = "ERROR_LABEL_" + inst.Offset;
 					if (currentFunction == null)
-						currentFunction = "ERROR_FUNC_" + offset;
+						currentFunction = "ERROR_FUNC_" + inst.Offset;
 
 					if (currentLabel != "__MAIN")
-						Decompile(i, offsets, instructions, sb, ref currentFile, ref currentLabel, ref currentFunction);
+						Decompile(tokenizer, sb, ref currentFile, ref currentLabel, ref currentFunction);
 
 					string args = "";
 					string funcDecl = "Function " + currentFunction + "(" + args + ")";
 					string endFunc = "End Function";
 					string funcText = funcDecl + "\r\n" + sb.ToString().Trim().Indent() + "\r\n" + endFunc;
 
-					if (i + 1 < count)
+					if (tokenizer.HasNext())
 					{
-						string next = Disassembler.GetCode().GetSymbolName(offsets[i + 1]);
+						string next = Disassembler.GetCode().GetSymbolName(tokenizer.GetInstruction(+1).Offset);
 						if (next != null && next.StartsWith("_f"))
 						{
 							DecompiledCode.Add(currentFunction, funcText);
@@ -98,26 +97,38 @@ namespace BlitzLensLib.Decompilers
 			}
 		}
 
-		public void Decompile(int i, List<uint> offsets, List<string> instructions, StringBuilder sb, ref string currentFile, ref string currentLabel, ref string currentFunction)
+		public void Decompile(InstructionTokenizer tokenizer, StringBuilder sb, ref string currentFile, ref string currentLabel, ref string currentFunction)
 		{
-			string instruction = instructions[i];
+			ASMInstruction instruction = tokenizer.GetInstruction();
 
-			string[] split = instruction.Split(' ');
+			string[] split = instruction.Code.Split(' ');
 
 			// TODO: Decompile back to BlitzBasic
-			if (split[0] == "call")
+			switch (split[0])
 			{
-				if (split[1] == "__bbStrConst")
+				case "call":
+					DecompileCall(tokenizer, sb, ref currentFile, ref currentLabel, ref currentFunction);
+					break;
+			}
+		}
+
+		public void DecompileCall(InstructionTokenizer tokenizer, StringBuilder sb, ref string currentFile, ref string currentLabel, ref string currentFunction)
+		{
+			ASMInstruction instruction = tokenizer.GetInstruction();
+
+			string location = instruction.Code.Split(' ')[1];
+
+			if (location.StartsWith("__bb"))
+			{
+				if (location == "__bbStrConst")
 				{
-					//string lastInstruction = instructions[i - 1];
-					//string reg = lastInstruction.Split(',')[1].Trim();
-					string inst = instructions[i - 2];
+					string inst = tokenizer.GetInstruction(-2).Code;
 					if (inst.Trim().StartsWith("mov [esp],"))
-						inst = instructions[i - 3];
+						inst = tokenizer.GetInstruction(-3).Code;
 					string symbol = inst.Split(',')[1].Trim();
 					if (!Disassembler.GetVariables().ContainsKey(symbol))
 					{
-						Logger.Warn("__bbStrConst: Missing Symbol '" + symbol + "' for " + instructions[i - 2]);
+						Logger.Warn("__bbStrConst: Missing Symbol '" + symbol + "' for " + inst);
 						sb.AppendLine(";" + inst);
 					}
 					else
@@ -138,13 +149,13 @@ namespace BlitzLensLib.Decompilers
 						}
 					}
 				}
-				else if (split[1] == "__bbDebugStmt")
+				else if (location == "__bbDebugStmt")
 				{
-					string inst = instructions[i - 1];
+					string inst = tokenizer.GetInstruction(-1).Code;
 					string symbol = inst.Split(',')[1].Trim();
 					if (!Disassembler.GetVariables().ContainsKey(symbol))
 					{
-						Logger.Warn("__bbDebugStmt: Missing Symbol '" + symbol + "' for " + instructions[i - 2]);
+						Logger.Warn("__bbDebugStmt: Missing Symbol '" + symbol + "' for " + inst);
 						sb.AppendLine("; Missing Symbol: " + inst);
 					}
 					else
@@ -161,6 +172,38 @@ namespace BlitzLensLib.Decompilers
 							FileNames.Add(currentFile);
 					}
 				}
+				else if (location == "__bbDebugEnter")
+				{
+
+				}
+				else if (location == "__bbDimArray")
+				{
+
+				}
+				else if (location == "__bbUndimArray")
+				{
+
+				}
+				else
+				{
+
+				}
+			}
+			else if (Disassembler.GetCode().ContainsSymbol(location))
+			{
+				// TODO: Function Args
+				string args = "";
+				sb.AppendLine(location.Substring(2) + "(" + args + ")");
+			}
+			else
+			{
+				// TODO: Function Args
+
+				string args = "";
+				string loc = location;
+				if (loc.StartsWith("_f"))
+					loc = loc.Substring(2);
+				sb.AppendLine(loc + "(" + args + ")");
 			}
 		}
 
