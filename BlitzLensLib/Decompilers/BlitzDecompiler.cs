@@ -136,7 +136,7 @@ namespace BlitzLensLib.Decompilers
 					if (i + 1 < count)
 					{
 						string next = Disassembler.GetCode().GetSymbolName(offsets[i + 1]);
-						if (next != null && next.StartsWith("_f")) //(next.StartsWith("_f") || next.EndsWith("_leave") && currentFunction == "__MAIN"))
+						if (next != null && next.StartsWith("_f"))
 						{
 							DecompiledCode.Add(currentFunction, funcText);
 							if (currentFile != null)
