@@ -96,8 +96,11 @@ namespace BlitzLensLib
 			SetTask("Writing Output");
 			Directory.CreateDirectory(OutputPath);
 
-			using (StreamWriter sw = new StreamWriter(OutputPath + "test.asm"))
+			using (StreamWriter sw = new StreamWriter(OutputPath + "disassembly.asm"))
 			{
+				sw.WriteLine("; Disassembled by BlitzLens");
+				sw.WriteLine();
+
 				bool first = true;
 				foreach (var pair in disassembler.GetDisassembly())
 				{
@@ -123,6 +126,27 @@ namespace BlitzLensLib
 				}
 			}
 
+			var code = decompiler.GetDecompiledCode();
+			if (decompiler.GetFileNames().Count > 0)
+			{
+				foreach (var file in decompiler.GetFileNames())
+				{
+					Dictionary<string, string> fileCode = new Dictionary<string, string>();
+					foreach (var pair in decompiler.GetFunctionFileMap())
+					{
+						if (pair.Value != file)
+							continue;
+
+						fileCode.Add(pair.Key, decompiler.GetDecompiledCode()[pair.Key]);
+					}
+					SaveDecompiledCode(file, ref fileCode);
+				}
+			}
+			else
+			{
+				SaveDecompiledCode("main.bb", ref code);
+			}
+
 			Exit("Done");
 		}
 
@@ -139,6 +163,21 @@ namespace BlitzLensLib
 		private void Decompile(BlitzDecompiler decompiler)
 		{
 			decompiler.Decompile();
+		}
+
+		private void SaveDecompiledCode(string file, ref Dictionary<string, string> code)
+		{
+			using (StreamWriter sw = new StreamWriter(OutputPath + file))
+			{
+				sw.WriteLine("; Decompiled by BlitzLens");
+				sw.WriteLine();
+
+				foreach (var pair in code)
+				{
+					sw.WriteLine(pair.Value);
+					sw.WriteLine();
+				}
+			}
 		}
 	}
 }
