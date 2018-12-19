@@ -14,20 +14,51 @@ namespace BlitzLensLib
 	{
 		protected BlitzDecompiler Decompiler;
 
-		protected BlitzBasicCodeFile BBCCode;
-		protected List<string> KnownFunctions;
+		protected BlitzBasicCodeResource BBCCode;
 		protected Dictionary<string, string> Variables;
 
 		protected Dictionary<string, Dictionary<string, string>> Libs;
 
-		public BlitzModule(BlitzDecompiler decompiler, BlitzBasicCodeFile bbcCode)
+		private List<Instruction> _instructions;
+
+		protected List<Instruction> Instructions
 		{
-			BBCCode = bbcCode;
-			KnownFunctions = new List<string>();
+			get
+			{
+				if (_instructions == null)
+				{
+					GetInstructions();
+				}
+				return _instructions;
+			}
+		}
+
+		protected bool _commentOriginal;
+		protected bool _applySymbols;
+
+		private readonly Dictionary<uint, string> _disassembly;
+
+		public BlitzModule(BlitzDecompiler decompiler, BlitzBasicCodeResource bbcCode, bool applySymbols = true, bool commentOriginal = false)
+		{
 			Variables = new Dictionary<string, string>();
 			Libs = new Dictionary<string, Dictionary<string, string>>();
+			_disassembly = new Dictionary<uint, string>();
 
 			Decompiler = decompiler;
+			BBCCode = bbcCode;
+			_commentOriginal = commentOriginal;
+			_applySymbols = applySymbols;
+		}
+
+		private void GetInstructions(uint address = 0, bool commentOriginal = false, bool applyRelocs = true)
+		{
+			Disassembler disasm = new Disassembler(
+				BBCCode?.GetRelocatedCode(),
+				ArchitectureMode.x86_32,
+				address, false, Vendor.Any, address
+			);
+
+			_instructions = disasm.Disassemble().ToList();
 		}
 
 		public void ProcessVariables()
@@ -74,88 +105,37 @@ namespace BlitzLensLib
 			}
 		}
 
-		public string DisassembleFunction(string symbol, ref Dictionary<string, string> doneFuncs, bool commentOriginal)
+		public void Disassemble()
 		{
-			if (!BBCCode.ContainsSymbol(symbol))
-				return null;
-			if (!KnownFunctions.Contains(symbol))
-				KnownFunctions.Add(symbol);
-			return DisassembleFunction(BBCCode.GetSymbol(symbol), ref doneFuncs, commentOriginal);
-		}
+			_disassembly.Clear();
 
-		public string DisassembleFunction(uint address, ref Dictionary<string, string> doneFuncs, bool commentOriginal)
-		{
-			Disassembler disasm = new Disassembler(BBCCode?.GetRelocatedCode(),
-												   ArchitectureMode.x86_32,
-				address, false, Vendor.Any, address);
-			StringBuilder sb = new StringBuilder();
-			string symbolName = BBCCode?.GetSymbolName(address);
-			if (symbolName == null)
-				symbolName = "_off_" + address.ToString("X8");
-			sb.AppendLine(symbolName + ":");
-
-			Logger.Info(symbolName);
-
-			while (true)
+			foreach (var inst in Instructions)
 			{
-				Instruction inst = disasm.NextInstruction();
-				string instStr = GetInstructionWithSymbols(inst);
-				sb.Append("    " + instStr);
-				if (commentOriginal)
-					sb.Append(" ; " + inst);
-				sb.AppendLine();
+				if (inst.Mnemonic == ud_mnemonic_code.UD_Inop)
+					continue;
+
+				uint offset = (uint)inst.Offset;
+
+				if (BBCCode.GetOrderedVarSymbols().Length > 0 && BBCCode.ContainsSymbol(BBCCode.GetOrderedVarSymbols()[0]) && offset >= BBCCode.GetSymbol(BBCCode.GetOrderedVarSymbols()[0]))
+					break;
+
+				string symbolName = BBCCode.GetSymbolName(offset);
+				if (symbolName != null)
+					Logger.Info("    " + offset.ToString("X8") + ": " + symbolName);
 
 				if (inst.Error)
 				{
-					sb.AppendLine("<ERROR:" + inst.ErrorMessage + ">");
+					Logger.Error("<ERROR:" + offset + ">" + inst.ErrorMessage + ">");
 					break;
 				}
 
-				if (inst.Mnemonic == ud_mnemonic_code.UD_Icall ||
-				    inst.Mnemonic == ud_mnemonic_code.UD_Ijmp ||
-				    inst.Mnemonic == ud_mnemonic_code.UD_Ijz ||
-				    inst.Mnemonic == ud_mnemonic_code.UD_Ijnz ||
-				    inst.Mnemonic == ud_mnemonic_code.UD_Ijg ||
-					inst.Mnemonic == ud_mnemonic_code.UD_Ijge ||
-				    inst.Mnemonic == ud_mnemonic_code.UD_Ijl ||
-					inst.Mnemonic == ud_mnemonic_code.UD_Ijle ||
-				    inst.Mnemonic == ud_mnemonic_code.UD_Ija ||
-				    inst.Mnemonic == ud_mnemonic_code.UD_Ijae ||
-				    inst.Mnemonic == ud_mnemonic_code.UD_Ijb ||
-				    inst.Mnemonic == ud_mnemonic_code.UD_Ijbe ||
-				    inst.Mnemonic == ud_mnemonic_code.UD_Ijcxz ||
-				    inst.Mnemonic == ud_mnemonic_code.UD_Ijecxz ||
-				    inst.Mnemonic == ud_mnemonic_code.UD_Ijo ||
-				    inst.Mnemonic == ud_mnemonic_code.UD_Ijno ||
-				    inst.Mnemonic == ud_mnemonic_code.UD_Ijp ||
-				    inst.Mnemonic == ud_mnemonic_code.UD_Ijnp ||
-				    inst.Mnemonic == ud_mnemonic_code.UD_Ijs ||
-				    inst.Mnemonic == ud_mnemonic_code.UD_Ijns)
-				{
-					uint off = (uint)inst.Operands[0].Value;
-					string funcName = BBCCode.GetSymbolName(off);
-					if (funcName != null && !KnownFunctions.Contains(funcName) && BBCCode.ContainsSymbol(funcName))
-						KnownFunctions.Add(funcName);
-				}
-				
-				string symbolName2 = BBCCode?.GetSymbolName((uint)(inst.Offset + (uint)inst.Length));
-				if (symbolName2 != null && symbolName2 != symbolName)
-				{
-					if (!KnownFunctions.Contains(symbolName2))
-						KnownFunctions.Add(symbolName2);
-					if (!doneFuncs.ContainsKey(symbolName2))
-						doneFuncs.Add(symbolName2, DisassembleFunction(symbolName2, ref doneFuncs, commentOriginal));
-					break;
-				}
+				string instStr = GetInstructionString(this, inst, _commentOriginal, _applySymbols);
 
-				if (inst.Mnemonic == ud_mnemonic_code.UD_Iret || inst.Mnemonic == ud_mnemonic_code.UD_Ijmp)
-					break;
+				_disassembly.Add(offset, instStr);
 			}
-
-			return sb.ToString();
 		}
 
-		private string GetInstructionWithSymbols(Instruction instruction, bool commentOriginal = false)
+		public static string GetInstructionString(BlitzModule module, Instruction instruction, bool commentOriginal = false, bool applySymbols = true)
 		{
 			StringBuilder sb = new StringBuilder();
 
@@ -174,15 +154,18 @@ namespace BlitzLensLib
 
 			for (int i = 0; i < instruction.Operands.Length; i++)
 			{
+				// SharpDisasm's imul instruction has 3 operands but the blitz assembler only expects the last two.
 				if (instName == "imul" && i == 0)
 					i++;
 
-				Operand op = instruction.Operands[i];
-				string opText = GetOperandText(instruction, operands[i].Trim(), op) ?? operands[i].Trim();
-				
-				sb.Append(Utils.GetSizePrefix(op.Size));
+				string opText = operands[i].Trim();
+
+				if (applySymbols)
+					opText = ApplyRelocToOperand(module, instruction, i, opText);
+
+				sb.Append(Utils.GetSizePrefix(instruction.Operands[i]));
 				sb.Append(opText);
-				
+
 				if (i < instruction.Operands.Length - 1)
 					sb.Append(", ");
 			}
@@ -193,26 +176,30 @@ namespace BlitzLensLib
 			return sb.ToString();
 		}
 
-		private string GetOperandText(Instruction inst, string originalLine, Operand operand)
+		private static string ApplyRelocToOperand(BlitzModule module, Instruction inst, int operandIndex, string originalLine)
 		{
 			string newLine = originalLine;
 
-			uint off = (uint) inst.Offset;
-			uint sz = (uint) inst.Length;
-			
-			foreach (var absReloc in BBCCode.GetAbsRelocs())
+			uint off = (uint)inst.Offset;
+			uint sz = (uint)inst.Length;
+
+			Operand operand = inst.Operands[operandIndex];
+
+			for (int i = 0; i < sz; i++)
 			{
-				var absOff = absReloc.Key;
-				if (absOff <= off || absOff >= off + sz)
+				uint newOff = (uint)i + off;
+
+				if (!module.GetCode().HasAbsReloc(newOff))
 					continue;
+				string sym = module.GetCode().GetAbsRelocSymbol(newOff);
 
 				string originalValue = "0x" + operand.Value.ToString("X").ToLower();
-				string sym = absReloc.Value;
+
 				uint symOff = 0;
-				if (BBCCode.ContainsSymbol(sym))
-					symOff = BBCCode.GetSymbol(sym);
-				else if (BBCCode.ContainsImport(sym))
-					symOff = BBCCode.GetImport(sym);
+				if (module.GetCode().ContainsSymbol(sym))
+					symOff = module.GetCode().GetSymbol(sym);
+				else if (module.GetCode().ContainsImport(sym))
+					symOff = module.GetCode().GetImport(sym);
 				if (symOff == 0)
 					throw new InvalidDataException("No Symbol? (ABS) " + off.ToString("X8"));
 				if (operand.Value != symOff)
@@ -221,20 +208,22 @@ namespace BlitzLensLib
 				return newLine;
 			}
 
-			foreach (var relReloc in BBCCode.GetRelRelocs())
+			for (int i = 0; i < sz; i++)
 			{
-				var relOff = relReloc.Key;
-				if (relOff <= off || relOff >= off + sz)
+				uint newOff = (uint)i + off;
+
+				if (!module.GetCode().HasRelReloc(newOff))
 					continue;
+				string sym = module.GetCode().GetRelRelocSymbol(newOff);
 
 				uint oVal = (uint)(off + sz + operand.Value);
 				string originalValue = "0x" + oVal.ToString("X").ToLower();
-				string sym = relReloc.Value;
+
 				uint symOff = 0;
-				if (BBCCode.ContainsSymbol(sym))
-					symOff = BBCCode.GetSymbol(sym);
-				else if (BBCCode.ContainsImport(sym))
-					symOff = BBCCode.GetImport(sym);
+				if (module.GetCode().ContainsSymbol(sym))
+					symOff = module.GetCode().GetSymbol(sym);
+				else if (module.GetCode().ContainsImport(sym))
+					symOff = module.GetCode().GetImport(sym);
 				if (symOff == 0)
 					throw new InvalidDataException("No Symbol? (REL) " + off.ToString("X8"));
 				if (operand.Value != symOff)
@@ -246,14 +235,19 @@ namespace BlitzLensLib
 			return newLine;
 		}
 
-		public string[] GetKnownFunctions()
+		public BlitzBasicCodeResource GetCode()
 		{
-			return KnownFunctions.ToArray();
+			return BBCCode;
 		}
 
 		public Dictionary<string, string> GetVariables()
 		{
 			return Variables;
+		}
+
+		public Dictionary<uint, string> GetDisassembly()
+		{
+			return _disassembly;
 		}
 	}
 }

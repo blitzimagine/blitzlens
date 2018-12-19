@@ -43,5 +43,33 @@ namespace BlitzLensLib
 			self[index + 2] = symBytes[2];
 			self[index + 3] = symBytes[3];
 		}
+
+		public static string Indent(this string self, int amount = 4)
+		{
+			StringBuilder sb = new StringBuilder();
+
+			string s = self.Replace("\r", "");
+
+			string[] lines = s.Split('\n');
+
+			for (int i = 0; i < lines.Length; i++)
+			{
+				string line = lines[i];
+
+				sb.AppendSpaces(amount);
+				sb.Append(line);
+
+				if (i < lines.Length - 1)
+					sb.AppendLine();
+			}
+
+			return sb.ToString();
+		}
+
+		public static void AppendSpaces(this StringBuilder sb, int amount)
+		{
+			for (int i = 0; i < amount; i++)
+				sb.Append(' ');
+		}
 	}
 }

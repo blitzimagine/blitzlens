@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using SharpDisasm;
+using SharpDisasm.Udis86;
 
 namespace BlitzLensLib
 {
@@ -110,7 +112,7 @@ namespace BlitzLensLib
 			return sb.ToString();
 		}
 
-		public static string DisassembleLibsVar(byte[] data, BlitzBasicCodeFile code, ref Dictionary<string, Dictionary<string, string>> libs)
+		public static string DisassembleLibsVar(byte[] data, BlitzBasicCodeResource code, ref Dictionary<string, Dictionary<string, string>> libs)
 		{
 			StringBuilder sb = new StringBuilder();
 
@@ -158,7 +160,7 @@ namespace BlitzLensLib
 			return sb.ToString();
 		}
 
-		public static string DisassembleDataVar(byte[] data, BlitzBasicCodeFile code)
+		public static string DisassembleDataVar(byte[] data, BlitzBasicCodeResource code)
 		{
 			StringBuilder sb = new StringBuilder();
 
@@ -203,9 +205,9 @@ namespace BlitzLensLib
 			return sb.ToString();
 		}
 
-		public static string DisassembleVariable(string name, BlitzBasicCodeFile code, uint offset, uint size, ref Dictionary<string, Dictionary<string, string>> libs)
+		public static string DisassembleVariable(string name, BlitzBasicCodeResource code, uint offset, uint size, ref Dictionary<string, Dictionary<string, string>> libs)
 		{
-			Logger.Info(name);
+			Logger.Info("    " + offset.ToString("X8") + ": " + name);
 
 			byte[] data = code.GetData(offset, size);
 
@@ -226,19 +228,57 @@ namespace BlitzLensLib
 			return GetByteArrayString(data);
 		}
 
+		public static bool NeedsSizePrefix(Operand op)
+		{
+			return op.Size != 32;
+		}
+
 		public static string GetSizePrefix(int size)
 		{
 			switch (size)
 			{
-				case 8:
+				case 1:
 					return "byte ";
-				case 16:
+				case 2:
 					return "word ";
-				case 64:
+				case 4:
+					return "dword ";
+				case 8:
 					return "qword ";
 				default:
 					return "";
 			}
+		}
+
+		public static string GetSizePrefix(Operand op)
+		{
+			if (!NeedsSizePrefix(op))
+				return "";
+			return GetSizePrefix(op.Size / 8);
+		}
+
+		public static bool IsJumpOrCall(Instruction inst)
+		{
+			return (inst.Mnemonic == ud_mnemonic_code.UD_Icall ||
+					inst.Mnemonic == ud_mnemonic_code.UD_Ijmp ||
+					inst.Mnemonic == ud_mnemonic_code.UD_Ijz ||
+					inst.Mnemonic == ud_mnemonic_code.UD_Ijnz ||
+					inst.Mnemonic == ud_mnemonic_code.UD_Ijg ||
+					inst.Mnemonic == ud_mnemonic_code.UD_Ijge ||
+					inst.Mnemonic == ud_mnemonic_code.UD_Ijl ||
+					inst.Mnemonic == ud_mnemonic_code.UD_Ijle ||
+					inst.Mnemonic == ud_mnemonic_code.UD_Ija ||
+					inst.Mnemonic == ud_mnemonic_code.UD_Ijae ||
+					inst.Mnemonic == ud_mnemonic_code.UD_Ijb ||
+					inst.Mnemonic == ud_mnemonic_code.UD_Ijbe ||
+					inst.Mnemonic == ud_mnemonic_code.UD_Ijcxz ||
+					inst.Mnemonic == ud_mnemonic_code.UD_Ijecxz ||
+					inst.Mnemonic == ud_mnemonic_code.UD_Ijo ||
+					inst.Mnemonic == ud_mnemonic_code.UD_Ijno ||
+					inst.Mnemonic == ud_mnemonic_code.UD_Ijp ||
+					inst.Mnemonic == ud_mnemonic_code.UD_Ijnp ||
+					inst.Mnemonic == ud_mnemonic_code.UD_Ijs ||
+					inst.Mnemonic == ud_mnemonic_code.UD_Ijns);
 		}
 	}
 

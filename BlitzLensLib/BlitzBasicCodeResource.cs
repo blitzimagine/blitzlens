@@ -7,34 +7,40 @@ using System.Threading.Tasks;
 
 namespace BlitzLensLib
 {
-	public class BlitzBasicCodeFile
+	public class BlitzBasicCodeResource
 	{
 		protected BlitzDecompiler Decompiler;
 
 		protected byte[] RawCode;
 		protected Dictionary<string, uint> Symbols;
+		protected Dictionary<uint, string> SymbolNames;
+		protected Dictionary<string, string> SymbolRemap;
 		protected Dictionary<uint, string> RelativeRelocs;
 		protected Dictionary<uint, string> AbsoluteRelocs;
 
 		protected Dictionary<string, uint> Imports;
+		protected Dictionary<uint, string> ImportNames;
 
 		protected byte[] RelocatedCode;
 
 		public uint CodeSize => (uint)RelocatedCode.Length;
 
-		private BlitzBasicCodeFile(BlitzDecompiler decompiler)
+		private BlitzBasicCodeResource(BlitzDecompiler decompiler)
 		{
 			Symbols = new Dictionary<string, uint>();
+			SymbolNames = new Dictionary<uint, string>();
+			SymbolRemap = new Dictionary<string, string>();
 			RelativeRelocs = new Dictionary<uint, string>();
 			AbsoluteRelocs = new Dictionary<uint, string>();
 			Imports = new Dictionary<string, uint>();
+			ImportNames = new Dictionary<uint, string>();
 
 			Decompiler = decompiler;
 		}
 
-		public static BlitzBasicCodeFile FromBytes(BlitzDecompiler decompiler, byte[] bytes)
+		public static BlitzBasicCodeResource FromBytes(BlitzDecompiler decompiler, byte[] bytes)
 		{
-			BlitzBasicCodeFile result = new BlitzBasicCodeFile(decompiler);
+			BlitzBasicCodeResource result = new BlitzBasicCodeResource(decompiler);
 			
 			using (MemoryStream ms = new MemoryStream(bytes))
 			using (BinaryReader br = new BinaryReader(ms))
@@ -58,7 +64,16 @@ namespace BlitzLensLib
 				int symbolCount = br.ReadInt32();
 				for (int i = 0; i < symbolCount; i++)
 				{
-					Symbols.Add(br.ReadCString(), br.ReadUInt32());
+					string name = br.ReadCString();
+					uint addr = br.ReadUInt32();
+					if (Symbols.ContainsValue(addr))
+					{
+						SymbolRemap.Add(name, SymbolNames[addr]);
+						continue;
+					}
+
+					Symbols.Add(name, addr);
+					SymbolNames.Add(addr, name);
 				}
 
 				int relRelocCount = br.ReadInt32();
@@ -66,6 +81,8 @@ namespace BlitzLensLib
 				{
 					string sym = br.ReadCString();
 					uint offset = br.ReadUInt32();
+					if (SymbolRemap.ContainsKey(sym))
+						sym = SymbolRemap[sym];
 					RelativeRelocs.Add(offset, sym);
 				}
 
@@ -74,6 +91,8 @@ namespace BlitzLensLib
 				{
 					string sym = br.ReadCString();
 					uint offset = br.ReadUInt32();
+					if (SymbolRemap.ContainsKey(sym))
+						sym = SymbolRemap[sym];
 					AbsoluteRelocs.Add(offset, sym);
 				}
 			}
@@ -125,6 +144,7 @@ namespace BlitzLensLib
 			uint baseAddr = 0x10000000;
 			uint symAddr = baseAddr + ((uint) Imports.Count + 1) * 4;
 			Imports.Add(symbol, symAddr);
+			ImportNames.Add(symAddr, symbol);
 
 			return symAddr;
 		}
@@ -146,13 +166,9 @@ namespace BlitzLensLib
 
 		public string GetImportName(uint address)
 		{
-			foreach (var pair in Imports)
-			{
-				if (pair.Value == address)
-					return pair.Key;
-			}
-
-			return null;
+			if (!ImportNames.ContainsKey(address))
+				return null;
+			return ImportNames[address];
 		}
 
 		public bool ContainsSymbol(string symbol)
@@ -172,13 +188,9 @@ namespace BlitzLensLib
 
 		public string GetSymbolName(uint address)
 		{
-			foreach (var pair in Symbols)
-			{
-				if (pair.Value == address)
-					return pair.Key;
-			}
-
-			return null;
+			if (!SymbolNames.ContainsKey(address))
+				return null;
+			return SymbolNames[address];
 		}
 
 		public string GetAnyName(uint address)
@@ -207,6 +219,16 @@ namespace BlitzLensLib
 			return null;
 		}
 
+		public bool HasAbsReloc(uint address)
+		{
+			return AbsoluteRelocs.ContainsKey(address);
+		}
+
+		public bool HasRelReloc(uint address)
+		{
+			return RelativeRelocs.ContainsKey(address);
+		}
+
 		public Dictionary<uint, string> GetAbsRelocs()
 		{
 			return AbsoluteRelocs;
@@ -217,41 +239,49 @@ namespace BlitzLensLib
 			return RelativeRelocs;
 		}
 
+		private string[] _orderedVarSymbols;
+
 		public string[] GetOrderedVarSymbols()
 		{
-			List<Symbol> syms = new List<Symbol>();
-
-			foreach (var pair in AbsoluteRelocs)
+			if (_orderedVarSymbols == null)
 			{
-				string symbol = pair.Value;
-				bool skip = false;
-				foreach (var s in syms)
+				List<Symbol> syms = new List<Symbol>();
+
+				foreach (var pair in AbsoluteRelocs)
 				{
-					if (s.Name == symbol)
+					string symbol = pair.Value;
+					bool skip = false;
+					foreach (var s in syms)
 					{
-						skip = true;
-						break;
+						if (s.Name == symbol)
+						{
+							skip = true;
+							break;
+						}
 					}
+
+					if (skip)
+						continue;
+
+					// when creating an import here, maybe separate it since it's a var?
+					uint addr = Symbols.ContainsKey(symbol) ? Symbols[symbol] : GetOrCreateImport(symbol);
+
+					Symbol sym = new Symbol(symbol, addr);
+					syms.Add(sym);
 				}
 
-				if (skip)
-					continue;
-				
-				// when creating an import here, maybe separate it since it's a var?
-				uint addr = Symbols.ContainsKey(symbol) ? Symbols[symbol] : GetOrCreateImport(symbol);
+				syms.Sort((x, y) => x.Address.CompareTo(y.Address));
 
-				Symbol sym = new Symbol(symbol, addr);
-				syms.Add(sym);
+				List<string> result = new List<string>();
+				foreach (Symbol sym in syms)
+				{
+					result.Add(sym.Name);
+				}
+
+				_orderedVarSymbols = result.ToArray();
 			}
 
-			syms.Sort((x, y) => x.Address.CompareTo(y.Address));
-
-			List<string> result = new List<string>();
-			foreach (Symbol sym in syms)
-			{
-				result.Add(sym.Name);
-			}
-			return result.ToArray();
+			return _orderedVarSymbols;
 		}
 
 		public byte[] GetRelocatedCode()
