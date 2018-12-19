@@ -189,17 +189,11 @@ namespace BlitzLensLib.Decompilers
 
 				}
 			}
-			else if (Disassembler.GetCode().ContainsSymbol(location))
-			{
-				// TODO: Function Args
-				string args = "";
-				sb.AppendLine(location.Substring(2) + "(" + args + ")");
-			}
 			else
 			{
 				// TODO: Function Args
-
 				string args = "";
+
 				string loc = location;
 				if (loc.StartsWith("_f"))
 					loc = loc.Substring(2);
