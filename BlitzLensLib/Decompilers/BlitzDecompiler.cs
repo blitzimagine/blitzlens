@@ -318,18 +318,10 @@ namespace BlitzLensLib.Decompilers
                 int locationDecimal = 0;
                 try {
                     locationDecimal = Convert.ToInt32(location, 16);
-                } catch(FormatException ex) {
+                } catch(FormatException) {
                     // Fail silently.
                 }
-                int location3Decimal = 0;
-                try {
-                    location3Decimal = Convert.ToInt32(location3, 16);
-                } catch (FormatException) {
-                    // Fail silently.
-                } catch (OverflowException) {
-                    // Fail silently.
-                }
-                sb.AppendLine("v" + locationDecimal + " = " + location3Decimal); // TODO: floats
+                sb.AppendLine("v" + locationDecimal + " = " + location3); // TODO: floats
             } catch (IndexOutOfRangeException) {
                 // Fail silently.
             }
