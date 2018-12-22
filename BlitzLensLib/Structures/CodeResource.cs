@@ -22,7 +22,7 @@ namespace BlitzLensLib.Structures
 
 		protected byte[] RelocatedCode;
 
-		public uint CodeSize => (uint)RelocatedCode.Length;
+		public uint CodeSize => (uint) RelocatedCode.Length;
 
 		private CodeResource(BlitzLens decompiler)
 		{
@@ -40,7 +40,7 @@ namespace BlitzLensLib.Structures
 		public static CodeResource FromBytes(BlitzLens decompiler, byte[] bytes)
 		{
 			CodeResource result = new CodeResource(decompiler);
-			
+
 			using (MemoryStream ms = new MemoryStream(bytes))
 			using (BinaryReader br = new BinaryReader(ms))
 			{
@@ -117,8 +117,8 @@ namespace BlitzLensLib.Structures
 					symOffset = Symbols[sym];
 				else
 					symOffset = GetOrCreateImport(sym);
-				
-				RelocatedCode.SetUInt32((int)offset, symOffset);
+
+				RelocatedCode.SetUInt32((int) offset, symOffset);
 			}
 
 			foreach (var pair in AbsoluteRelocs)
@@ -131,7 +131,7 @@ namespace BlitzLensLib.Structures
 				else
 					symOffset = GetOrCreateImport(sym);
 
-				RelocatedCode.SetUInt32((int)offset, symOffset);
+				RelocatedCode.SetUInt32((int) offset, symOffset);
 			}
 		}
 

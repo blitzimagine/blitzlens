@@ -15,7 +15,7 @@ namespace BlitzLensLib.Utils
 				byte b = br.ReadByte();
 				if (b == 0)
 					break;
-				sb.Append((char)b);
+				sb.Append((char) b);
 			}
 
 			return sb.ToString();

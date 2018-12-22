@@ -28,6 +28,7 @@ namespace BlitzLensLib.Decompilers
 				{
 					GetInstructions();
 				}
+
 				return _instructions;
 			}
 		}
@@ -37,7 +38,8 @@ namespace BlitzLensLib.Decompilers
 
 		private readonly Dictionary<uint, string> _disassembly;
 
-		public BlitzDisassembler(BlitzLens blitzLens, CodeResource bbcCode, bool applySymbols = true, bool commentOriginal = false)
+		public BlitzDisassembler(BlitzLens blitzLens, CodeResource bbcCode, bool applySymbols = true,
+			bool commentOriginal = false)
 		{
 			Variables = new Dictionary<string, string>();
 			Libs = new Dictionary<string, Dictionary<string, string>>();
@@ -90,6 +92,7 @@ namespace BlitzLensLib.Decompilers
 				{
 					size = BBCCode.CodeSize - offset;
 				}
+
 				varSizes.Add(sym, size);
 			}
 
@@ -113,9 +116,11 @@ namespace BlitzLensLib.Decompilers
 				if (inst.Mnemonic == ud_mnemonic_code.UD_Inop)
 					continue;
 
-				uint offset = (uint)inst.Offset;
+				uint offset = (uint) inst.Offset;
 
-				if (BBCCode.GetOrderedVarSymbols().Length > 0 && BBCCode.ContainsSymbol(BBCCode.GetOrderedVarSymbols()[0]) && offset >= BBCCode.GetSymbol(BBCCode.GetOrderedVarSymbols()[0]))
+				if (BBCCode.GetOrderedVarSymbols().Length > 0 &&
+				    BBCCode.ContainsSymbol(BBCCode.GetOrderedVarSymbols()[0]) &&
+				    offset >= BBCCode.GetSymbol(BBCCode.GetOrderedVarSymbols()[0]))
 					break;
 
 				string symbolName = BBCCode.GetSymbolName(offset);
@@ -134,7 +139,8 @@ namespace BlitzLensLib.Decompilers
 			}
 		}
 
-		public static string GetInstructionString(BlitzDisassembler module, Instruction instruction, bool commentOriginal = false, bool applySymbols = true)
+		public static string GetInstructionString(BlitzDisassembler module, Instruction instruction,
+			bool commentOriginal = false, bool applySymbols = true)
 		{
 			StringBuilder sb = new StringBuilder();
 
@@ -175,18 +181,19 @@ namespace BlitzLensLib.Decompilers
 			return sb.ToString();
 		}
 
-		private static string ApplyRelocToOperand(BlitzDisassembler module, Instruction inst, int operandIndex, string originalLine)
+		private static string ApplyRelocToOperand(BlitzDisassembler module, Instruction inst, int operandIndex,
+			string originalLine)
 		{
 			string newLine = originalLine;
 
-			uint off = (uint)inst.Offset;
-			uint sz = (uint)inst.Length;
+			uint off = (uint) inst.Offset;
+			uint sz = (uint) inst.Length;
 
 			Operand operand = inst.Operands[operandIndex];
 
 			for (int i = 0; i < sz; i++)
 			{
-				uint newOff = (uint)i + off;
+				uint newOff = (uint) i + off;
 
 				if (!module.GetCode().HasAbsReloc(newOff))
 					continue;
@@ -209,13 +216,13 @@ namespace BlitzLensLib.Decompilers
 
 			for (int i = 0; i < sz; i++)
 			{
-				uint newOff = (uint)i + off;
+				uint newOff = (uint) i + off;
 
 				if (!module.GetCode().HasRelReloc(newOff))
 					continue;
 				string sym = module.GetCode().GetRelRelocSymbol(newOff);
 
-				uint oVal = (uint)(off + sz + operand.Value);
+				uint oVal = (uint) (off + sz + operand.Value);
 				string originalValue = "0x" + oVal.ToString("X").ToLower();
 
 				uint symOff = 0;

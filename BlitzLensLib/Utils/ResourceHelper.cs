@@ -69,7 +69,7 @@ namespace BlitzLensLib.Utils
 					{
 						byte[] uiBytes = new byte[resSize];
 						IntPtr ipMemorySource = LockResource(resData);
-						Marshal.Copy(ipMemorySource, uiBytes, 0, (int)resSize);
+						Marshal.Copy(ipMemorySource, uiBytes, 0, (int) resSize);
 						FreeLibrary(hModule);
 						return uiBytes;
 					}
@@ -77,6 +77,7 @@ namespace BlitzLensLib.Utils
 
 				FreeLibrary(hModule);
 			}
+
 			return null;
 		}
 

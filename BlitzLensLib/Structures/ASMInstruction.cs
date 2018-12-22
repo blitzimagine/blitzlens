@@ -24,9 +24,9 @@ namespace BlitzLensLib.Structures
 				return false;
 			}
 
-			var instruction = (ASMInstruction)obj;
+			var instruction = (ASMInstruction) obj;
 			return this.Offset == instruction.Offset &&
-				   this.Code == instruction.Code;
+			       this.Code == instruction.Code;
 		}
 
 		public override int GetHashCode()

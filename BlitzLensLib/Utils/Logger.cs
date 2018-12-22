@@ -3,6 +3,7 @@
 	internal static class Logger
 	{
 		public delegate void OnLogged(LogLevel level, string msg);
+
 		public static event OnLogged Logged;
 
 		public static void Log(LogLevel level, string msg)

@@ -20,7 +20,7 @@ namespace BlitzLens
 				else
 					Error(msg);
 			}
-			
+
 #if DEBUG
 			string code = "ExitCode: " + exitCode;
 			if (exitCode == 0)

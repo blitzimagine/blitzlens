@@ -65,7 +65,7 @@ namespace BlitzLensLib.Utils
 					break;
 				if (data[i] == '\\')
 					sb.Append('\\');
-				sb.Append((char)data[i]);
+				sb.Append((char) data[i]);
 			}
 
 			sb.Append("\", 0x00");
@@ -87,8 +87,8 @@ namespace BlitzLensLib.Utils
 			{
 				uint ptr = br.ReadUInt32();
 				sb.AppendLine("    .dd 0x" + ptr.ToString("X8") + " ; Pointer");
-				DataType type = (DataType)br.ReadInt32();
-				sb.AppendLine("    .dd 0x" + ((int)type).ToString("X2") + " ; Type: " + type);
+				DataType type = (DataType) br.ReadInt32();
+				sb.AppendLine("    .dd 0x" + ((int) type).ToString("X2") + " ; Type: " + type);
 				int dimensions = br.ReadInt32();
 				sb.AppendLine("    .dd 0x" + dimensions.ToString("X2") + " ; Dimensions: " + dimensions);
 				int scales = br.ReadInt32();
@@ -113,7 +113,8 @@ namespace BlitzLensLib.Utils
 			return sb.ToString();
 		}
 
-		public static string DisassembleLibsVar(byte[] data, CodeResource code, ref Dictionary<string, Dictionary<string, string>> libs)
+		public static string DisassembleLibsVar(byte[] data, CodeResource code,
+			ref Dictionary<string, Dictionary<string, string>> libs)
 		{
 			StringBuilder sb = new StringBuilder();
 
@@ -151,10 +152,10 @@ namespace BlitzLensLib.Utils
 							sym = "0x" + offset.ToString("X2");
 							Logger.Warn("Missing __LIBS Symbol for: " + dllName + " -> " + funcName);
 						}
+
 						sb.AppendLine("    .dd " + sym);
 						libs[dllName].Add(funcName, sym);
 					}
-
 				}
 			}
 
@@ -170,8 +171,8 @@ namespace BlitzLensLib.Utils
 			{
 				while (!br.Eof())
 				{
-					DataType type = (DataType)br.ReadInt32();
-					sb.Append("    .dd 0x" + ((int)type).ToString("X2") + " ; " + type);
+					DataType type = (DataType) br.ReadInt32();
+					sb.Append("    .dd 0x" + ((int) type).ToString("X2") + " ; " + type);
 
 					if (type != DataType.End)
 						sb.AppendLine();
@@ -206,7 +207,8 @@ namespace BlitzLensLib.Utils
 			return sb.ToString();
 		}
 
-		public static string DisassembleVariable(string name, CodeResource code, uint offset, uint size, ref Dictionary<string, Dictionary<string, string>> libs)
+		public static string DisassembleVariable(string name, CodeResource code, uint offset, uint size,
+			ref Dictionary<string, Dictionary<string, string>> libs)
 		{
 			Logger.Info("    " + offset.ToString("X8") + ": " + name);
 

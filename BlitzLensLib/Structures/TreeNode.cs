@@ -5,84 +5,97 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BlitzLensLib.Structures {
-    // copy pasted from https://github.com/gt4dev/yet-another-tree-structure
-    public class TreeNode<T> : IEnumerable<TreeNode<T>> {
+namespace BlitzLensLib.Structures
+{
+	// copy pasted from https://github.com/gt4dev/yet-another-tree-structure
+	public class TreeNode<T> : IEnumerable<TreeNode<T>>
+	{
+		public T Data { get; set; }
+		public TreeNode<T> Parent { get; set; }
+		public ICollection<TreeNode<T>> Children { get; set; }
 
-        public T Data { get; set; }
-        public TreeNode<T> Parent { get; set; }
-        public ICollection<TreeNode<T>> Children { get; set; }
+		public Boolean IsRoot
+		{
+			get { return Parent == null; }
+		}
 
-        public Boolean IsRoot {
-            get { return Parent == null; }
-        }
+		public Boolean IsLeaf
+		{
+			get { return Children.Count == 0; }
+		}
 
-        public Boolean IsLeaf {
-            get { return Children.Count == 0; }
-        }
-
-        public int Level {
-            get {
-                if (this.IsRoot)
-                    return 0;
-                return Parent.Level + 1;
-            }
-        }
-
-
-        public TreeNode(T data) {
-            this.Data = data;
-            this.Children = new LinkedList<TreeNode<T>>();
-
-            this.ElementsIndex = new LinkedList<TreeNode<T>>();
-            this.ElementsIndex.Add(this);
-        }
-
-        public TreeNode<T> AddChild(T child) {
-            TreeNode<T> childNode = new TreeNode<T>(child) { Parent = this };
-            this.Children.Add(childNode);
-
-            this.RegisterChildForSearch(childNode);
-
-            return childNode;
-        }
-
-        public override string ToString() {
-            return Data != null ? Data.ToString() : "[data null]";
-        }
+		public int Level
+		{
+			get
+			{
+				if (this.IsRoot)
+					return 0;
+				return Parent.Level + 1;
+			}
+		}
 
 
-        #region searching
+		public TreeNode(T data)
+		{
+			this.Data = data;
+			this.Children = new LinkedList<TreeNode<T>>();
 
-        private ICollection<TreeNode<T>> ElementsIndex { get; set; }
+			this.ElementsIndex = new LinkedList<TreeNode<T>>();
+			this.ElementsIndex.Add(this);
+		}
 
-        private void RegisterChildForSearch(TreeNode<T> node) {
-            ElementsIndex.Add(node);
-            if (Parent != null)
-                Parent.RegisterChildForSearch(node);
-        }
+		public TreeNode<T> AddChild(T child)
+		{
+			TreeNode<T> childNode = new TreeNode<T>(child) {Parent = this};
+			this.Children.Add(childNode);
 
-        public TreeNode<T> FindTreeNode(Func<TreeNode<T>, bool> predicate) {
-            return this.ElementsIndex.FirstOrDefault(predicate);
-        }
+			this.RegisterChildForSearch(childNode);
 
-        #endregion
+			return childNode;
+		}
+
+		public override string ToString()
+		{
+			return Data != null ? Data.ToString() : "[data null]";
+		}
 
 
-        #region iterating
+		#region searching
 
-        IEnumerator IEnumerable.GetEnumerator() {
-            return GetEnumerator();
-        }
+		private ICollection<TreeNode<T>> ElementsIndex { get; set; }
 
-        public IEnumerator<TreeNode<T>> GetEnumerator() {
-            yield return this;
-            foreach (var directChild in this.Children) {
-                foreach (var anyChild in directChild)
-                    yield return anyChild;
-            }
-        }
+		private void RegisterChildForSearch(TreeNode<T> node)
+		{
+			ElementsIndex.Add(node);
+			if (Parent != null)
+				Parent.RegisterChildForSearch(node);
+		}
 
-        #endregion
-    }
+		public TreeNode<T> FindTreeNode(Func<TreeNode<T>, bool> predicate)
+		{
+			return this.ElementsIndex.FirstOrDefault(predicate);
+		}
+
+		#endregion
+
+
+		#region iterating
+
+		IEnumerator IEnumerable.GetEnumerator()
+		{
+			return GetEnumerator();
+		}
+
+		public IEnumerator<TreeNode<T>> GetEnumerator()
+		{
+			yield return this;
+			foreach (var directChild in this.Children)
+			{
+				foreach (var anyChild in directChild)
+					yield return anyChild;
+			}
+		}
+
+		#endregion
+	}
 }

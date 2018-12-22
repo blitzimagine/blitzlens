@@ -13,17 +13,21 @@ namespace BlitzLensLib
 	public class BlitzLens
 	{
 		public delegate void OnLogged(LogLevel level, string msg);
+
 		public event OnLogged Logged;
 
 		public delegate void OnTaskSet(string task);
+
 		public event OnTaskSet TaskSet;
 
 		public delegate void OnHeaderSet(string header);
+
 		public event OnHeaderSet HeaderSet;
 
 		public delegate void OnExited(string msg, int exitCode = 0);
+
 		public event OnExited Exited;
-		
+
 		protected string Task;
 		protected string Header;
 
@@ -143,6 +147,7 @@ namespace BlitzLensLib
 
 						fileCode.Add(pair.Key, decompiler.GetDecompiledCode()[pair.Key]);
 					}
+
 					SaveDecompiledCode(file, ref fileCode);
 				}
 			}
