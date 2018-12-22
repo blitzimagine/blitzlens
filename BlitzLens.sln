@@ -7,8 +7,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BlitzLens", "BlitzLens\Blit
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BlitzLensLib", "BlitzLensLib\BlitzLensLib.csproj", "{3DA761C2-268F-4BD1-9B07-15DD2A14EB9A}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SharpDisasm", "libs\sharpdisasm\SharpDisasm\SharpDisasm.csproj", "{ADAB5584-7746-45D9-A6FF-327AF3E7008E}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -23,10 +21,6 @@ Global
 		{3DA761C2-268F-4BD1-9B07-15DD2A14EB9A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3DA761C2-268F-4BD1-9B07-15DD2A14EB9A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3DA761C2-268F-4BD1-9B07-15DD2A14EB9A}.Release|Any CPU.Build.0 = Release|Any CPU
-		{ADAB5584-7746-45D9-A6FF-327AF3E7008E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{ADAB5584-7746-45D9-A6FF-327AF3E7008E}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{ADAB5584-7746-45D9-A6FF-327AF3E7008E}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{ADAB5584-7746-45D9-A6FF-327AF3E7008E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
