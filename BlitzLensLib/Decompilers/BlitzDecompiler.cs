@@ -19,6 +19,17 @@ namespace BlitzLensLib.Decompilers
 		protected Dictionary<string, string> FunctionFileMap;
 		protected List<string> FileNames;
 
+        private TreeNode<string> _statements;
+        protected TreeNode<string> Statements
+        {
+            get {
+                if(_statements == null) {
+                    _statements = GetStatements();
+                }
+                return _statements;
+            }
+        }
+
 		public BlitzDecompiler(BlitzLens lens, BlitzDisassembler disassembler)
 		{
 			DecompiledCode = new Dictionary<string, string>();
@@ -97,83 +108,37 @@ namespace BlitzLensLib.Decompilers
 			}
 		}
 
+        public TreeNode<string> GetStatements() {
+            TreeNode<string> statements = new TreeNode<string>("statements");
+            TreeNode<string> statement0;
+            TreeNode<string> statement1;
+            TreeNode<string> statement2;
+            TreeNode<string> statement3;
+            TreeNode<string> statement4;
+            TreeNode<string> statement5;
+            TreeNode<string> statement6;
+            TreeNode<string> statement7;
+            TreeNode<string> statement8;
+            TreeNode<string> statement9;
+            TreeNode<string> statement10;
+            TreeNode<string> statement11;
+            TreeNode<string> statement12;
+            {
+                statements.AddChild("sub");
+            }
+            {
+                statements.AddChild("call"); // hmmm
+            }
+            {
+                statements.AddChild("mov"); // set int/float
+            }
+
+            return statements;
+        }
+
 		public void Decompile(InstructionTokenizer tokenizer, StringBuilder sb, ref string currentFile,
 			ref string currentLabel, ref string currentFunction)
 		{
-			TreeNode<string> statements = new TreeNode<string>("statements");
-			TreeNode<string> statement0;
-			TreeNode<string> statement1;
-			TreeNode<string> statement2;
-			TreeNode<string> statement3;
-			TreeNode<string> statement4;
-			TreeNode<string> statement5;
-			TreeNode<string> statement6;
-			TreeNode<string> statement7;
-			TreeNode<string> statement8;
-			TreeNode<string> statement9;
-			TreeNode<string> statement10;
-			TreeNode<string> statement11;
-			TreeNode<string> statement12;
-			{
-				statement0 = statements.AddChild("sub");
-				{
-					statement1 = statement0.AddChild("lea");
-					{
-						statement2 = statement1.AddChild("mov");
-						{
-							statement3 = statement2.AddChild("mov");
-							{
-								statement4 = statement3.AddChild("sub");
-								{
-									statement5 = statement4.AddChild("mov");
-									{
-										statement6 = statement5.AddChild("mov");
-										{
-											statement7 = statement6.AddChild("mov");
-											{
-												statement8 = statement7.AddChild("call");
-												{
-													statement9 = statement8.AddChild("mov");
-													{
-														statement10 = statement9.AddChild("mov");
-														{
-															statement11 = statement10.AddChild("mov");
-															{
-																statement12 =
-																	statement11.AddChild("call"); // string assignment
-															}
-														}
-													}
-												}
-											}
-										}
-									}
-								}
-							}
-						}
-					}
-				}
-				statement1 = statement0.AddChild("mov");
-				{
-					statement2 = statement1.AddChild("mov");
-					{
-						statement3 = statement2.AddChild("call");
-						{
-							statement4 = statement3.AddChild("mov");
-							{
-								statement5 = statement4.AddChild("call"); // function call (TODO: different arguments!)
-							}
-						}
-					}
-				}
-			}
-			{
-				statements.AddChild("call"); // hmmm
-			}
-			{
-				statements.AddChild("mov"); // set int/float
-			}
-
 			ASMInstruction instruction;
 
 			string opcode;
@@ -182,7 +147,8 @@ namespace BlitzLensLib.Decompilers
 
 			bool wrongBranch = false;
 
-			foreach (TreeNode<string> statement in statements)
+            // TODO: make the tree a list and just gut out this entire for loop
+			foreach (TreeNode<string> statement in Statements)
 			{
 				if (wrongBranch && !statement.IsLeaf)
 				{
@@ -233,21 +199,18 @@ namespace BlitzLensLib.Decompilers
 				if (statement.IsLeaf && statement.Data == opcode)
 				{
 					// right branch
-					switch (branch)
-					{
-						case 0:
-							DecompileStringAssignment(tokenizer, sb, ref currentFile, ref currentLabel,
-								ref currentFunction);
-							break;
-						case 1:
-							DecompileFunctionCall(tokenizer, sb, ref currentFile, ref currentLabel,
-								ref currentFunction);
-							break;
-						case 2:
-							DecompileCall(tokenizer, sb, ref currentFile, ref currentLabel, ref currentFunction);
-							break;
-						case 3:
-							DecompileSetIntFloat(tokenizer, sb, ref currentFile, ref currentLabel, ref currentFunction);
+					switch (branch) {
+                        case 0:
+                            DecompileCallArguments(tokenizer, sb, ref currentFile, ref currentLabel,
+                                ref currentFunction); // sub
+                            break;
+                        case 1:
+                            DecompileCall(tokenizer, sb, ref currentFile, ref currentLabel,
+                                ref currentFunction); // call
+                            break;
+                        case 2:
+							DecompileVariableReference(tokenizer, sb, ref currentFile, ref currentLabel,
+								ref currentFunction); // mov
 							break;
 					}
 
@@ -258,8 +221,8 @@ namespace BlitzLensLib.Decompilers
 				}
 			}
 
-			// TODO: Decompile back to BlitzBasic
-			/*
+            // TODO: Decompile back to BlitzBasic
+            /*
 			switch (split[0])
 			{
 				case "call":
@@ -267,121 +230,13 @@ namespace BlitzLensLib.Decompilers
 					break;
 			}
 			*/
-		}
+        }
 
-		public void DecompileStringAssignment(InstructionTokenizer tokenizer, StringBuilder sb, ref string currentFile,
-			ref string currentLabel, ref string currentFunction)
-		{
-			try
-			{
-				ASMInstruction instruction = tokenizer.GetInstruction(8);
-				string location = instruction.Code.Split(' ')[1];
+        public void DecompileCallArguments(InstructionTokenizer tokenizer, StringBuilder sb, ref string currentFile,
+            ref string currentLabel, ref string currentFunction) {
+        }
 
-				if (location == "__bbStrConst")
-				{
-					instruction = tokenizer.GetInstruction(12);
-					location = instruction.Code.Split(' ')[1];
-
-					if (location == "__bbStrStore")
-					{
-						instruction = tokenizer.GetInstruction(1);
-						location = instruction.Code.Split('-')[1];
-						location = location.Split(']')[0];
-						// Matt is going to yell my head off later...
-						int locationDecimal = 0;
-						try
-						{
-							locationDecimal = Convert.ToInt32(location, 16);
-						}
-						catch (FormatException)
-						{
-							// Fail silently.
-						}
-						catch (OverflowException)
-						{
-							// Fail silently.
-						}
-
-						ASMInstruction instruction2 = tokenizer.GetInstruction(5);
-						string location2 = instruction.Code.Split(',')[1];
-
-						sb.AppendLine("v" + locationDecimal + " = " + location2);
-					}
-				}
-			}
-			catch (IndexOutOfRangeException)
-			{
-				// Fail silently.
-			}
-		}
-
-		public void DecompileFunctionCall(InstructionTokenizer tokenizer, StringBuilder sb, ref string currentFile,
-			ref string currentLabel, ref string currentFunction)
-		{
-			try
-			{
-				ASMInstruction instruction = tokenizer.GetInstruction(3);
-				string location = instruction.Code.Split(' ')[1];
-
-				if (location == "__bbStrFromInt")
-				{
-					instruction = tokenizer.GetInstruction(5);
-					location = instruction.Code.Split(' ')[1];
-					ASMInstruction instruction2 = tokenizer.GetInstruction(1);
-					string location2 = instruction2.Code.Split('-')[1];
-					location2 = location2.Split(']')[0];
-					int location2Decimal = 0;
-					try
-					{
-						location2Decimal = Convert.ToInt32(location2, 16);
-					}
-					catch (FormatException)
-					{
-						// Fail silently.
-					}
-					catch (OverflowException)
-					{
-						// Fail silently.
-					}
-
-					sb.AppendLine(location.Substring(2) + "(v" + location2Decimal + ")");
-				}
-			}
-			catch (IndexOutOfRangeException)
-			{
-				// Fail silently.
-			}
-		}
-
-		public void DecompileSetIntFloat(InstructionTokenizer tokenizer, StringBuilder sb, ref string currentFile,
-			ref string currentLabel, ref string currentFunction)
-		{
-			try
-			{
-				ASMInstruction instruction = tokenizer.GetInstruction();
-				string location = instruction.Code.Split('-')[1];
-				location = location.Split(']')[0];
-				string[] location2 = instruction.Code.Split(' ');
-				string location3 = location2[location2.Length - 1];
-				int locationDecimal = 0;
-				try
-				{
-					locationDecimal = Convert.ToInt32(location, 16);
-				}
-				catch (FormatException)
-				{
-					// Fail silently.
-				}
-
-				sb.AppendLine("v" + locationDecimal + " = " + location3); // TODO: floats
-			}
-			catch (IndexOutOfRangeException)
-			{
-				// Fail silently.
-			}
-		}
-
-		public void DecompileCall(InstructionTokenizer tokenizer, StringBuilder sb, ref string currentFile,
+        public void DecompileCall(InstructionTokenizer tokenizer, StringBuilder sb, ref string currentFile,
 			ref string currentLabel, ref string currentFunction)
 		{
 			ASMInstruction instruction = tokenizer.GetInstruction();
@@ -457,9 +312,13 @@ namespace BlitzLensLib.Decompilers
 					loc = loc.Substring(2);
 				sb.AppendLine(loc + "(" + args + ")");
 			}
-		}
+        }
 
-		public Dictionary<string, string> GetDecompiledCode()
+        public void DecompileVariableReference(InstructionTokenizer tokenizer, StringBuilder sb, ref string currentFile,
+            ref string currentLabel, ref string currentFunction) {
+        }
+
+        public Dictionary<string, string> GetDecompiledCode()
 		{
 			return DecompiledCode;
 		}
