@@ -121,7 +121,7 @@ namespace BlitzLensLib
 					if (name != null)
 					{
 						// Alignment
-						if (name.StartsWith("_f"))
+						if (name.StartsWith("_f") || name == "__MAIN")
 							sw.WriteLine("    " + ".align 16");
 						sw.WriteLine(name + ":");
 					}
@@ -133,7 +133,7 @@ namespace BlitzLensLib
 				foreach (var pair in disassembler.GetVariables())
 				{
 					// Alignment
-					string name = pair.Value;
+					string name = pair.Key;
 					if (name.StartsWith("_v") || name.StartsWith("_a") || name.StartsWith("_t") || name == "__LIBS" || name == "__DATA")
 						sw.WriteLine("    " + ".align 4");
 

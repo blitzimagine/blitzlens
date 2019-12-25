@@ -120,22 +120,9 @@ namespace BlitzLensLib.Utils
 
 		private static int _inType = 0;
 
-		public static string GetTypeString(uint offset, CodeResource code)
+		public static string GetTypeString(byte[] data, CodeResource code)
 		{
 			StringBuilder sb = new StringBuilder();
-
-			byte[] data;
-
-			if(_inType == 0)
-				data = code.GetData(offset, 0x4 * 1);
-			else if (_inType == 1)
-				data = code.GetData(offset, 0x4 * 5);
-			else
-				data = code.GetData(offset, 0x4 * 6);
-
-			bool doType2 = false;
-
-			uint numFields = 0;
 
 			using (MemoryStream ms = new MemoryStream(data))
 			using (BinaryReader br = new BinaryReader(ms))
@@ -175,42 +162,31 @@ namespace BlitzLensLib.Utils
 
 					if (_inType == 2)
 					{
-						doType2 = true;
-
-						numFields = br.ReadUInt32();
+						uint numFields = br.ReadUInt32();
 						sb.AppendLine("    .dd 0x" + numFields.ToString("X2") + " ; Field Count");
+						
+						for (int i = 0; i < numFields; i++)
+						{
+							// Field types
+							uint off = br.ReadUInt32();
+							string sym = code.GetAnyName(off);
+							if (sym == null)
+							{
+								sym = "0x" + off.ToString("X2");
+								Logger.Warn("Missing field type at: " + off);
+							}
+
+							sb.AppendLine("    .dd " + sym);
+						}
+
+						sb.AppendLine("    ; End Of Type");
+
+						_inType = 0;
 					}
 					else
 					{
 						_inType = 2;
 					}
-				}
-			}
-
-			if (doType2)
-			{
-				data = code.GetData((uint)(offset + data.Length), 0x4 * numFields);
-
-				using (MemoryStream ms = new MemoryStream(data))
-				using (BinaryReader br = new BinaryReader(ms))
-				{
-					for (int i = 0; i < numFields; i++)
-					{
-						// Field types
-						uint off = br.ReadUInt32();
-						string sym = code.GetSymbolName(off);
-						if (sym == null)
-						{
-							sym = "0x" + off.ToString("X2");
-							Logger.Warn("Missing field type at: " + off);
-						}
-
-						sb.AppendLine("    .dd " + sym);
-					}
-
-					sb.AppendLine("    ; End Of Type");
-
-					_inType = 0;
 				}
 			}
 
@@ -319,7 +295,7 @@ namespace BlitzLensLib.Utils
 			byte[] data = code.GetData(offset, size);
 
 			if (_inType > 0 || IsType(name))
-				return GetTypeString(offset, code);
+				return GetTypeString(data, code);
 			if (IsString(name) && size > 1)
 				return GetString(data);
 			if (IsArray(name))
