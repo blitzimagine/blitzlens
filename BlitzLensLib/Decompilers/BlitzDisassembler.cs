@@ -160,7 +160,7 @@ namespace BlitzLensLib.Decompilers
 			for (int i = 0; i < instruction.Operands.Length; i++)
 			{
 				// SharpDisasm's imul instruction has 3 operands but the blitz assembler only expects the last two.
-				if (instName == "imul" && i == 0)
+				if (instName == "imul" && i == 0 && instruction.Operands.Length == 3)
 					i++;
 
 				string opText = operands[i].Trim();
