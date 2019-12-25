@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -18,6 +19,17 @@ namespace BlitzLensLib.Decompilers
 		protected Dictionary<string, string> DecompiledCode;
 		protected Dictionary<string, string> FunctionFileMap;
 		protected List<string> FileNames;
+
+        private List<string> _statements;
+        protected List<string> Statements
+        {
+            get {
+                if(_statements == null) {
+                    _statements = GetStatements();
+                }
+                return _statements;
+            }
+        }
 
 		public BlitzDecompiler(BlitzLens lens, BlitzDisassembler disassembler)
 		{
@@ -97,169 +109,57 @@ namespace BlitzLensLib.Decompilers
 			}
 		}
 
+        public List<string> GetStatements() {
+            List<string> statements = new List<string>();
+            statements.Add("sub");
+            statements.Add("call");
+            statements.Add("mov");
+
+            return statements;
+        }
+
 		public void Decompile(InstructionTokenizer tokenizer, StringBuilder sb, ref string currentFile,
 			ref string currentLabel, ref string currentFunction)
 		{
-			TreeNode<string> statements = new TreeNode<string>("statements");
-			TreeNode<string> statement0;
-			TreeNode<string> statement1;
-			TreeNode<string> statement2;
-			TreeNode<string> statement3;
-			TreeNode<string> statement4;
-			TreeNode<string> statement5;
-			TreeNode<string> statement6;
-			TreeNode<string> statement7;
-			TreeNode<string> statement8;
-			TreeNode<string> statement9;
-			TreeNode<string> statement10;
-			TreeNode<string> statement11;
-			TreeNode<string> statement12;
-			{
-				statement0 = statements.AddChild("sub");
-				{
-					statement1 = statement0.AddChild("lea");
-					{
-						statement2 = statement1.AddChild("mov");
-						{
-							statement3 = statement2.AddChild("mov");
-							{
-								statement4 = statement3.AddChild("sub");
-								{
-									statement5 = statement4.AddChild("mov");
-									{
-										statement6 = statement5.AddChild("mov");
-										{
-											statement7 = statement6.AddChild("mov");
-											{
-												statement8 = statement7.AddChild("call");
-												{
-													statement9 = statement8.AddChild("mov");
-													{
-														statement10 = statement9.AddChild("mov");
-														{
-															statement11 = statement10.AddChild("mov");
-															{
-																statement12 =
-																	statement11.AddChild("call"); // string assignment
-															}
-														}
-													}
-												}
-											}
-										}
-									}
-								}
-							}
-						}
-					}
-				}
-				statement1 = statement0.AddChild("mov");
-				{
-					statement2 = statement1.AddChild("mov");
-					{
-						statement3 = statement2.AddChild("call");
-						{
-							statement4 = statement3.AddChild("mov");
-							{
-								statement5 = statement4.AddChild("call"); // function call (TODO: different arguments!)
-							}
-						}
-					}
-				}
-			}
-			{
-				statements.AddChild("call"); // hmmm
-			}
-			{
-				statements.AddChild("mov"); // set int/float
-			}
-
-			ASMInstruction instruction;
+			ASMInstruction instruction = tokenizer.GetInstruction();
 
 			string opcode;
 
-			int branch = 0;
-
-			bool wrongBranch = false;
-
-			foreach (TreeNode<string> statement in statements)
+            // TODO: add "environment" to keep track of variable types
+            
+			for (int i=0;i<Statements.Count;i++)
 			{
-				if (wrongBranch && !statement.IsLeaf)
-				{
-					continue;
-				}
-
-				if (wrongBranch)
-				{
-					wrongBranch = false;
-					continue;
-				}
-
-				if (statement.Level < 1)
-				{
-					continue;
-				}
-
-				instruction = tokenizer.GetInstruction(statement.Level - 1);
-
 				if (instruction == null)
 				{
-					// branch out of bounds
-					// if this is the leaf, when we continue we might be in the right branch
-					if (!statement.IsLeaf)
-					{
-						wrongBranch = true;
-					}
-
-					branch++;
-					continue;
+                    break;
 				}
 
 				opcode = instruction.Code.Split(' ')[0];
 
-				if (statement.Data != opcode)
+				if (Statements[i] == opcode)
 				{
-					// wrong branch
-					// if this is the leaf, when we continue we might be in the right branch
-					if (!statement.IsLeaf)
-					{
-						wrongBranch = true;
-					}
-
-					branch++;
-					continue;
-				}
-
-				if (statement.IsLeaf && statement.Data == opcode)
-				{
-					// right branch
-					switch (branch)
-					{
-						case 0:
-							DecompileStringAssignment(tokenizer, sb, ref currentFile, ref currentLabel,
-								ref currentFunction);
-							break;
-						case 1:
-							DecompileFunctionCall(tokenizer, sb, ref currentFile, ref currentLabel,
-								ref currentFunction);
-							break;
-						case 2:
-							DecompileCall(tokenizer, sb, ref currentFile, ref currentLabel, ref currentFunction);
-							break;
-						case 3:
-							DecompileSetIntFloat(tokenizer, sb, ref currentFile, ref currentLabel, ref currentFunction);
+					// right opcode
+					switch (i) {
+                        case 0:
+                            DecompileSub(tokenizer, sb, ref currentFile, ref currentLabel,
+                                ref currentFunction); // sub
+                            break;
+                        case 1:
+                            DecompileCall(tokenizer, sb, ref currentFile, ref currentLabel,
+                                ref currentFunction); // call
+                            break;
+                        case 2:
+                            DecompileMov(tokenizer, sb, ref currentFile, ref currentLabel,
+								ref currentFunction); // mov
 							break;
 					}
+                }
 
-					for (int i = 0; i < statement.Level - 1; i++)
-					{
-						tokenizer.Next();
-					}
-				}
-			}
+                instruction = tokenizer.NextInstruction();
+            }
 
-			// TODO: Decompile back to BlitzBasic
-			/*
+            // TODO: Decompile back to BlitzBasic
+            /*
 			switch (split[0])
 			{
 				case "call":
@@ -267,199 +167,224 @@ namespace BlitzLensLib.Decompilers
 					break;
 			}
 			*/
-		}
+        }
 
-		public void DecompileStringAssignment(InstructionTokenizer tokenizer, StringBuilder sb, ref string currentFile,
-			ref string currentLabel, ref string currentFunction)
-		{
-			try
-			{
-				ASMInstruction instruction = tokenizer.GetInstruction(8);
-				string location = instruction.Code.Split(' ')[1];
+        public bool DecompileSub(InstructionTokenizer tokenizer, StringBuilder sb, ref string currentFile,
+            ref string currentLabel, ref string currentFunction) {
+            ASMInstruction instruction = tokenizer.GetInstruction();
+            if (GetOperand(instruction, 0) == "esp") {
+                // subtracting from stack, call with arguments
+                if (!TryHarderParse(GetOperand(instruction, 1), out int numArguments)) {
+                    return false;
+                }
+                numArguments /= 4;
+                int currentArgument = 0;
 
-				if (location == "__bbStrConst")
-				{
-					instruction = tokenizer.GetInstruction(12);
-					location = instruction.Code.Split(' ')[1];
+                // recursively decompile while not found mov [esp], X...
+                do {
+                    instruction = tokenizer.NextInstruction();
+                    Decompile(tokenizer, sb, ref currentFile, ref currentLabel, ref currentFunction);
+                    instruction = tokenizer.GetInstruction();
+                    // TODO: argumentX = ...
+                    if (IsEffectiveAddress(instruction, 0) && !TryHarderParse(GetEffectiveAddress(instruction, 0, 1), out currentArgument)) {
+                        return false;
+                    }
+                } while (currentArgument > 0);
 
-					if (location == "__bbStrStore")
-					{
-						instruction = tokenizer.GetInstruction(1);
-						location = instruction.Code.Split('-')[1];
-						location = location.Split(']')[0];
-						// Matt is going to yell my head off later...
-						int locationDecimal = 0;
-						try
-						{
-							locationDecimal = Convert.ToInt32(location, 16);
-						}
-						catch (FormatException)
-						{
-							// Fail silently.
-						}
-						catch (OverflowException)
-						{
-							// Fail silently.
-						}
+                // now we are at the call, get function name
+                instruction = tokenizer.NextInstruction();
+                string functionName = GetOperand(instruction, 0);
+                // TODO: is it _bbStrConst/Load/Store?
+                sb.Append(functionName + "(");
+                for(int i=0;i<numArguments;i++) {
+                    sb.Append("a" + i);
+                    if (i < numArguments) {
+                        sb.Append(", ");
+                    }
+                }
+                sb.AppendLine(")");
+                return true;
+            } else {
+                // TODO: subtracting from a variable
+                return true;
+            }
+            return false;
+        }
 
-						ASMInstruction instruction2 = tokenizer.GetInstruction(5);
-						string location2 = instruction.Code.Split(',')[1];
+        public bool DecompileCall(InstructionTokenizer tokenizer, StringBuilder sb, ref string currentFile,
+            ref string currentLabel, ref string currentFunction) {
+            ASMInstruction instruction = tokenizer.GetInstruction();
+            string functionName = GetOperand(instruction, 0);
+            sb.AppendLine(functionName + "()");
+            return true;
+        }
 
-						sb.AppendLine("v" + locationDecimal + " = " + location2);
-					}
-				}
-			}
-			catch (IndexOutOfRangeException)
-			{
-				// Fail silently.
-			}
-		}
+        public bool DecompileMov(InstructionTokenizer tokenizer, StringBuilder sb, ref string currentFile,
+            ref string currentLabel, ref string currentFunction) {
+            ASMInstruction instruction = tokenizer.GetInstruction();
+            if (IsEffectiveAddress(instruction, 0) && GetEffectiveAddress(instruction, 0, 0) == "ebp") {
+                if (!TryHarderParse(GetEffectiveAddress(instruction, 0, 1), out int numVariable)) {
+                    return false;
+                }
+                numVariable /= 4;
+                // TODO: but what if it's a register...
+                sb.AppendLine("v" + numVariable + " = " + GetOperand(instruction, 1));
+                return true;
+            } else if (IsEffectiveAddress(instruction, 0) && GetEffectiveAddress(instruction, 0, 0) == "esp") {
+                if (!TryHarderParse(GetEffectiveAddress(instruction, 0, 1), out int numArgument)) {
+                    return false;
+                }
+                numArgument /= 4;
+                // TODO: but what if it's a register...
+                sb.AppendLine("a" + numArgument + " = " + GetOperand(instruction, 1));
+                return true;
+            }
+            return false;
+        }
 
-		public void DecompileFunctionCall(InstructionTokenizer tokenizer, StringBuilder sb, ref string currentFile,
-			ref string currentLabel, ref string currentFunction)
-		{
-			try
-			{
-				ASMInstruction instruction = tokenizer.GetInstruction(3);
-				string location = instruction.Code.Split(' ')[1];
+        public string GetOpcode(ASMInstruction instruction) {
+            return instruction.Code.Split(' ')[0].Trim();
+        }
 
-				if (location == "__bbStrFromInt")
-				{
-					instruction = tokenizer.GetInstruction(5);
-					location = instruction.Code.Split(' ')[1];
-					ASMInstruction instruction2 = tokenizer.GetInstruction(1);
-					string location2 = instruction2.Code.Split('-')[1];
-					location2 = location2.Split(']')[0];
-					int location2Decimal = 0;
-					try
-					{
-						location2Decimal = Convert.ToInt32(location2, 16);
-					}
-					catch (FormatException)
-					{
-						// Fail silently.
-					}
-					catch (OverflowException)
-					{
-						// Fail silently.
-					}
+        public string GetOperand(ASMInstruction instruction, int index) {
+            string result = instruction.Code.Substring(instruction.Code.IndexOf(' ')).Split(',')[index].Trim();
+            if (result == "byte" || result == "word" || result == "dword") {
+                result = instruction.Code.Substring(instruction.Code.IndexOf(' ')).Split(',')[index + 1].Trim();
+            }
+            return result;
+        }
 
-					sb.AppendLine(location.Substring(2) + "(v" + location2Decimal + ")");
-				}
-			}
-			catch (IndexOutOfRangeException)
-			{
-				// Fail silently.
-			}
-		}
+        public bool IsEffectiveAddress(ASMInstruction instruction, int operandIndex) {
+            string operand = GetOperand(instruction, operandIndex);
+            return (operand.Length > 3 && operand.IndexOf("[") == 0 && operand.LastIndexOf("]") == operand.Length - 1);
+        }
 
-		public void DecompileSetIntFloat(InstructionTokenizer tokenizer, StringBuilder sb, ref string currentFile,
-			ref string currentLabel, ref string currentFunction)
-		{
-			try
-			{
-				ASMInstruction instruction = tokenizer.GetInstruction();
-				string location = instruction.Code.Split('-')[1];
-				location = location.Split(']')[0];
-				string[] location2 = instruction.Code.Split(' ');
-				string location3 = location2[location2.Length - 1];
-				int locationDecimal = 0;
-				try
-				{
-					locationDecimal = Convert.ToInt32(location, 16);
-				}
-				catch (FormatException)
-				{
-					// Fail silently.
-				}
+        public string GetEffectiveAddress(ASMInstruction instruction, int operandIndex, int effectiveAddressIndex) {
+            string operand = GetOperand(instruction, operandIndex);
+            List<string> effectiveAddresses = new List<string>();
 
-				sb.AppendLine("v" + locationDecimal + " = " + location3); // TODO: floats
-			}
-			catch (IndexOutOfRangeException)
-			{
-				// Fail silently.
-			}
-		}
+            effectiveAddresses.Add(operand.Substring(1, 3));
 
-		public void DecompileCall(InstructionTokenizer tokenizer, StringBuilder sb, ref string currentFile,
-			ref string currentLabel, ref string currentFunction)
-		{
-			ASMInstruction instruction = tokenizer.GetInstruction();
+            if (operand.Length > 4) {
+                effectiveAddresses.Add(operand.Substring(4, operand.Length - 5));
+            } else {
+                effectiveAddresses.Add("0");
+            }
 
-			string location = instruction.Code.Split(' ')[1];
+            return effectiveAddresses[effectiveAddressIndex].Trim();
+        }
 
-			if (location.StartsWith("__bb"))
-			{
-				if (location == "__bbStrConst")
-				{
-					string inst = tokenizer.GetInstruction(-2).Code;
-					if (inst.Trim().StartsWith("mov [esp],"))
-						inst = tokenizer.GetInstruction(-3).Code;
-					string symbol = inst.Split(',')[1].Trim();
-					if (!Disassembler.GetVariables().ContainsKey(symbol))
-					{
-						Logger.Warn("__bbStrConst: Missing Symbol '" + symbol + "' for " + inst);
-						sb.AppendLine(";" + inst);
-					}
-					else
-					{
-						string var = Disassembler.GetVariables()[symbol];
-						if (var == ".db 0x00")
-						{
-							var = "\"\"";
+        public bool TryHarderParse(string s, out int result) {
+            result = 0;
+            if (string.IsNullOrEmpty(s)) {
+                return false;
+            }
 
-							sb.AppendLine(var);
-						}
-						else
-						{
-							var = var.Substring(4);
-							var = var.Substring(0, var.LastIndexOf(",", StringComparison.Ordinal));
+            int state = 0;
+            if (s[0] == '-') {
+                state = 1;
+            } else if (s[0] == '+') {
+                state = 2;
+            }
 
-							sb.AppendLine(var);
-						}
-					}
-				}
-				else if (location == "__bbDebugStmt")
-				{
-					string inst = tokenizer.GetInstruction(-1).Code;
-					string symbol = inst.Split(',')[1].Trim();
-					if (!Disassembler.GetVariables().ContainsKey(symbol))
-					{
-						Logger.Warn("__bbDebugStmt: Missing Symbol '" + symbol + "' for " + inst);
-						sb.AppendLine("; Missing Symbol: " + inst);
-					}
-					else
-					{
-						string var = Disassembler.GetVariables()[symbol];
-						var = var.Substring(4);
-						var = var.Substring(0, var.LastIndexOf(",", StringComparison.Ordinal)).Trim();
-						var = var.Substring(1, var.Length - 2);
+            if (state > 0) {
+                s = s.Substring(1);
+            }
 
-						var = Path.GetFileName(var);
+            if (s.IndexOf("0x") == 0) {
+                s = s.Substring(2);
+            }
 
-						currentFile = var;
-						if (!FileNames.Contains(currentFile))
-							FileNames.Add(currentFile);
-					}
-				}
-				else if (location == "__bbDebugEnter") { }
-				else if (location == "__bbDimArray") { }
-				else if (location == "__bbUndimArray") { }
-				else { }
-			}
-			else
-			{
-				// TODO: Function Args
-				string args = "";
+            if (!int.TryParse(s, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out result)) {
+                return false;
+            }
 
-				string loc = location;
-				if (loc.StartsWith("_f"))
-					loc = loc.Substring(2);
-				sb.AppendLine(loc + "(" + args + ")");
-			}
-		}
+            if (state == 1) {
+                result *= -1;
+            }
+            return true;
+        }
 
-		public Dictionary<string, string> GetDecompiledCode()
+        //public void DecompileCall(InstructionTokenizer tokenizer, StringBuilder sb, ref string currentFile,
+        //ref string currentLabel, ref string currentFunction) {
+        /*
+        ASMInstruction instruction = tokenizer.GetInstruction();
+
+        string location = instruction.Code.Split(' ')[1];
+
+        if (location.StartsWith("__bb"))
+        {
+            if (location == "__bbStrConst")
+            {
+                string inst = tokenizer.GetInstruction(-2).Code;
+                if (inst.Trim().StartsWith("mov [esp],"))
+                    inst = tokenizer.GetInstruction(-3).Code;
+                string symbol = inst.Split(',')[1].Trim();
+                if (!Disassembler.GetVariables().ContainsKey(symbol))
+                {
+                    Logger.Warn("__bbStrConst: Missing Symbol '" + symbol + "' for " + inst);
+                    sb.AppendLine(";" + inst);
+                }
+                else
+                {
+                    string var = Disassembler.GetVariables()[symbol];
+                    if (var == ".db 0x00")
+                    {
+                        var = "\"\"";
+
+                        sb.AppendLine(var);
+                    }
+                    else
+                    {
+                        var = var.Substring(4);
+                        var = var.Substring(0, var.LastIndexOf(",", StringComparison.Ordinal));
+
+                        sb.AppendLine(var);
+                    }
+                }
+            }
+            else if (location == "__bbDebugStmt")
+            {
+                string inst = tokenizer.GetInstruction(-1).Code;
+                string symbol = inst.Split(',')[1].Trim();
+                if (!Disassembler.GetVariables().ContainsKey(symbol))
+                {
+                    Logger.Warn("__bbDebugStmt: Missing Symbol '" + symbol + "' for " + inst);
+                    sb.AppendLine("; Missing Symbol: " + inst);
+                }
+                else
+                {
+                    string var = Disassembler.GetVariables()[symbol];
+                    var = var.Substring(4);
+                    var = var.Substring(0, var.LastIndexOf(",", StringComparison.Ordinal)).Trim();
+                    var = var.Substring(1, var.Length - 2);
+
+                    var = Path.GetFileName(var);
+
+                    currentFile = var;
+                    if (!FileNames.Contains(currentFile))
+                        FileNames.Add(currentFile);
+                }
+            }
+            else if (location == "__bbDebugEnter") { }
+            else if (location == "__bbDimArray") { }
+            else if (location == "__bbUndimArray") { }
+            else { }
+        }
+        else
+        {
+            // TODO: Function Args
+            string args = "";
+
+            string loc = location;
+            if (loc.StartsWith("_f"))
+                loc = loc.Substring(2);
+            sb.AppendLine(loc + "(" + args + ")");
+        }
+        */
+        //}
+
+        public Dictionary<string, string> GetDecompiledCode()
 		{
 			return DecompiledCode;
 		}
