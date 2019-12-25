@@ -65,7 +65,7 @@ namespace BlitzLensLib.Utils
 					break;
 				if (data[i] == '\\')
 					sb.Append('\\');
-				sb.Append((char) data[i]);
+				sb.Append((char)data[i]);
 			}
 
 			sb.Append("\", 0x00");
@@ -87,8 +87,8 @@ namespace BlitzLensLib.Utils
 			{
 				uint ptr = br.ReadUInt32();
 				sb.AppendLine("    .dd 0x" + ptr.ToString("X8") + " ; Pointer");
-				DataType type = (DataType) br.ReadInt32();
-				sb.AppendLine("    .dd 0x" + ((int) type).ToString("X2") + " ; Type: " + type);
+				DataType type = (DataType)br.ReadInt32();
+				sb.AppendLine("    .dd 0x" + ((int)type).ToString("X2") + " ; Type: " + type);
 				int dimensions = br.ReadInt32();
 				sb.AppendLine("    .dd 0x" + dimensions.ToString("X2") + " ; Dimensions: " + dimensions);
 				int scales = br.ReadInt32();
@@ -108,6 +108,110 @@ namespace BlitzLensLib.Utils
 
 				if (i < data.Length - 1)
 					sb.Append(", ");
+			}
+
+			return sb.ToString();
+		}
+
+		public static bool IsType(string name)
+		{
+			return name.StartsWith("_t") && name.Length > 2;
+		}
+
+		private static int _inType = 0;
+
+		public static string GetTypeString(uint offset, CodeResource code)
+		{
+			StringBuilder sb = new StringBuilder();
+
+			byte[] data;
+
+			if(_inType == 0)
+				data = code.GetData(offset, 0x4 * 1);
+			else if (_inType == 1)
+				data = code.GetData(offset, 0x4 * 5);
+			else
+				data = code.GetData(offset, 0x4 * 6);
+
+			bool doType2 = false;
+
+			uint numFields = 0;
+
+			using (MemoryStream ms = new MemoryStream(data))
+			using (BinaryReader br = new BinaryReader(ms))
+			{
+				if (_inType == 0)
+				{
+					uint id = br.ReadUInt32();
+					sb.AppendLine("    .dd 0x" + id.ToString("X2") + " ; Type");
+					_inType = 1;
+				}
+				else if (_inType == 1 || _inType == 2)
+				{
+					uint dummy = br.ReadUInt32();
+					sb.AppendLine("    .dd 0x" + dummy.ToString("X2") + " ; Fields");
+
+					for (int i = 0; i < 2; i++)
+					{
+						uint off = br.ReadUInt32();
+						string sym = code.GetSymbolName(off);
+						if (sym == null)
+						{
+							sym = "0x" + off.ToString("X2");
+							Logger.Warn("Missing variable at: " + off);
+						}
+
+						if (i == 0)
+							sb.AppendLine("    .dd " + sym + " ; Next");
+						else
+							sb.AppendLine("    .dd " + sym + " ; Prev");
+					}
+
+					uint type = br.ReadUInt32();
+					sb.AppendLine("    .dd 0x" + type.ToString("X2") + " ; Type");
+
+					int ref_cnt = br.ReadInt32();
+					sb.AppendLine("    .dd " + ref_cnt.ToString() + " ; Reference Count");
+
+					if (_inType == 2)
+					{
+						doType2 = true;
+
+						numFields = br.ReadUInt32();
+						sb.AppendLine("    .dd 0x" + numFields.ToString("X2") + " ; Field Count");
+					}
+					else
+					{
+						_inType = 2;
+					}
+				}
+			}
+
+			if (doType2)
+			{
+				data = code.GetData((uint)(offset + data.Length), 0x4 * numFields);
+
+				using (MemoryStream ms = new MemoryStream(data))
+				using (BinaryReader br = new BinaryReader(ms))
+				{
+					for (int i = 0; i < numFields; i++)
+					{
+						// Field types
+						uint off = br.ReadUInt32();
+						string sym = code.GetSymbolName(off);
+						if (sym == null)
+						{
+							sym = "0x" + off.ToString("X2");
+							Logger.Warn("Missing field type at: " + off);
+						}
+
+						sb.AppendLine("    .dd " + sym);
+					}
+
+					sb.AppendLine("    ; End Of Type");
+
+					_inType = 0;
+				}
 			}
 
 			return sb.ToString();
@@ -171,8 +275,8 @@ namespace BlitzLensLib.Utils
 			{
 				while (!br.Eof())
 				{
-					DataType type = (DataType) br.ReadInt32();
-					sb.Append("    .dd 0x" + ((int) type).ToString("X2") + " ; " + type);
+					DataType type = (DataType)br.ReadInt32();
+					sb.Append("    .dd 0x" + ((int)type).ToString("X2") + " ; " + type);
 
 					if (type != DataType.End)
 						sb.AppendLine();
@@ -214,6 +318,8 @@ namespace BlitzLensLib.Utils
 
 			byte[] data = code.GetData(offset, size);
 
+			if (_inType > 0 || IsType(name))
+				return GetTypeString(offset, code);
 			if (IsString(name) && size > 1)
 				return GetString(data);
 			if (IsArray(name))
