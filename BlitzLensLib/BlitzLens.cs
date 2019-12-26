@@ -138,7 +138,7 @@ namespace BlitzLensLib
 							sw.WriteLine(name + ":");
 						}
 					}
-					sw.WriteLine(DisassemblyUtil.RemoveHex(pair.Value.Indent()));
+					sw.WriteLine(pair.Value.Indent());
 				}
 
 				sw.WriteLine();
@@ -153,7 +153,7 @@ namespace BlitzLensLib
 					sw.WriteLine(pair.Key + ":");
 					if (!pair.Value.StartsWith("    "))
 						sw.Write("    ");
-					sw.WriteLine(DisassemblyUtil.RemoveHex(pair.Value));
+					sw.WriteLine(pair.Value);
 				}
 			}
 
