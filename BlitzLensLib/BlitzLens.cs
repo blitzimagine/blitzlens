@@ -96,8 +96,12 @@ namespace BlitzLensLib
 
 			BlitzDecompiler decompiler = new BlitzDecompiler(this, disassembler);
 
-			SetTask("Decompiling");
-			Decompile(decompiler);
+			bool decompile = false;
+			if (decompile)
+			{
+				SetTask("Decompiling");
+				Decompile(decompiler);
+			}
 
 			SetTask("Writing Output");
 			Directory.CreateDirectory(OutputPath);
@@ -112,20 +116,29 @@ namespace BlitzLensLib
 				bool first = true;
 				foreach (var pair in disassembler.GetDisassembly())
 				{
-					string name = bbcCode?.GetSymbolName(pair.Key);
+					List<string> names = bbcCode?.GetSymbolNames(pair.Key);
+					//string name = bbcCode?.GetSymbolName(pair.Key);
 					if (first)
 						first = false;
-					else if (name != null)
+					else if (names != null)
 						sw.WriteLine();
 
-					if (name != null)
+					if (names != null)
 					{
-						// Alignment
-						if (name.StartsWith("_f") || name == "__MAIN")
-							sw.WriteLine("    " + ".align 16");
-						sw.WriteLine(name + ":");
+						bool aligned = false;
+						foreach (var name in names)
+						{
+							// Alignment
+							if (!aligned && (name.StartsWith("_f") || name == "__MAIN"))
+							{
+								sw.WriteLine("    " + ".align 16");
+								aligned = true;
+							}
+
+							sw.WriteLine(name + ":");
+						}
 					}
-					sw.WriteLine(pair.Value.Indent());
+					sw.WriteLine(DisassemblyUtil.RemoveHex(pair.Value.Indent()));
 				}
 
 				sw.WriteLine();
@@ -140,30 +153,33 @@ namespace BlitzLensLib
 					sw.WriteLine(pair.Key + ":");
 					if (!pair.Value.StartsWith("    "))
 						sw.Write("    ");
-					sw.WriteLine(pair.Value);
+					sw.WriteLine(DisassemblyUtil.RemoveHex(pair.Value));
 				}
 			}
 
-			var code = decompiler.GetDecompiledCode();
-			if (decompiler.GetFileNames().Count > 0)
+			if (decompile)
 			{
-				foreach (var file in decompiler.GetFileNames())
+				var code = decompiler.GetDecompiledCode();
+				if (decompiler.GetFileNames().Count > 0)
 				{
-					Dictionary<string, string> fileCode = new Dictionary<string, string>();
-					foreach (var pair in decompiler.GetFunctionFileMap())
+					foreach (var file in decompiler.GetFileNames())
 					{
-						if (pair.Value != file)
-							continue;
+						Dictionary<string, string> fileCode = new Dictionary<string, string>();
+						foreach (var pair in decompiler.GetFunctionFileMap())
+						{
+							if (pair.Value != file)
+								continue;
 
-						fileCode.Add(pair.Key, decompiler.GetDecompiledCode()[pair.Key]);
+							fileCode.Add(pair.Key, decompiler.GetDecompiledCode()[pair.Key]);
+						}
+
+						SaveDecompiledCode(file, ref fileCode);
 					}
-
-					SaveDecompiledCode(file, ref fileCode);
 				}
-			}
-			else
-			{
-				SaveDecompiledCode("main.bb", ref code);
+				else
+				{
+					SaveDecompiledCode("main.bb", ref code);
+				}
 			}
 
 			Exit("Done");

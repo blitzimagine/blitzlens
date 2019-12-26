@@ -10,6 +10,42 @@ namespace BlitzLensLib.Utils
 {
 	internal static class DisassemblyUtil
 	{
+		public static string RemoveHex(string var)
+		{
+			if (var == null)
+				return null;
+			StringBuilder sb = new StringBuilder();
+
+			for (int i = 0; i < var.Length; i++)
+			{
+				if (i + 1 < var.Length && var[i] == '0' && var[i + 1] == 'x')
+				{
+					int length = 0;
+
+					int start = i + 2;
+
+					for (int j = start; j < var.Length; j++)
+					{
+						char c = char.ToLower(var[j]);
+						if (char.IsDigit(c) || (c >= 'a' && c <= 'f'))
+							length++;
+						else
+							break;
+					}
+
+					string numText = var.Substring(start, length);
+					sb.Append(((int)uint.Parse(numText, System.Globalization.NumberStyles.HexNumber)).ToString());
+
+					i += 2 + (length - 1);
+					continue;
+				}
+
+				sb.Append(var[i]);
+			}
+
+			return sb.ToString();
+		}
+
 		public static byte[] TrimNops(string name, byte[] data)
 		{
 			// Only string variables can have nops at the end in Blitz

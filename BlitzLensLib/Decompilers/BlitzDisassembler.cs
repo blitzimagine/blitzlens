@@ -103,6 +103,7 @@ namespace BlitzLensLib.Decompilers
 					continue;
 				uint offset = BBCCode.GetSymbol(sym);
 				uint size = pair.Value;
+				//Variables.Add(pair.Key, DisassemblyUtil.RemoveHex(DisassemblyUtil.DisassembleVariable(sym, BBCCode, offset, size, ref Libs)));
 				Variables.Add(pair.Key, DisassemblyUtil.DisassembleVariable(sym, BBCCode, offset, size, ref Libs));
 			}
 		}
@@ -122,6 +123,14 @@ namespace BlitzLensLib.Decompilers
 				    BBCCode.ContainsSymbol(BBCCode.GetOrderedVarSymbols()[0]) &&
 				    offset >= BBCCode.GetSymbol(BBCCode.GetOrderedVarSymbols()[0]))
 					break;
+
+				/*List<string> names = BBCCode.GetSymbolNames(offset);
+				if (names != null && names.Count > 0)
+				{
+					string symbolName = names[0];
+					if (symbolName != null)
+						Logger.Info("    " + offset.ToString("X8") + ": " + symbolName);
+				}*/
 
 				string symbolName = BBCCode.GetSymbolName(offset);
 				if (symbolName != null)
@@ -164,6 +173,27 @@ namespace BlitzLensLib.Decompilers
 					i++;
 
 				string opText = operands[i].Trim();
+				//opText = DisassemblyUtil.RemoveHex(opText);
+
+				/*if ((instName == "faddp" || instName == "fsubp" || instName == "fmulp" || instName == "fdivp" || instName == "fsubrp" || instName == "fdivrp") && instruction.Operands.Length == 1)
+				{
+					opText = opText.Replace("(", "").Replace(")", "");
+					opText += ", st0";
+				}*/
+
+				bool skipComma = false;
+
+				if ((instName == "faddp" || instName == "fsubp" || instName == "fmulp" || instName == "fdivp" || instName == "fsubrp" || instName == "fdivrp") && instruction.Operands.Length == 2)
+				{
+					if (i == 1)
+						break;
+					int stIndex = opText.IndexOf("st");
+					if (stIndex >= 0)
+					{
+						opText = opText.Substring(0, stIndex) + opText.Substring(stIndex, 2) + "(" + opText.Substring(stIndex + 2, 1) + ")";
+					}
+					skipComma = true;
+				}
 
 				if (applySymbols)
 					opText = ApplyRelocToOperand(module, instruction, i, opText);
@@ -171,7 +201,7 @@ namespace BlitzLensLib.Decompilers
 				sb.Append(DisassemblyUtil.GetSizePrefix(instruction.Operands[i]));
 				sb.Append(opText);
 
-				if (i < instruction.Operands.Length - 1)
+				if (!skipComma && i < instruction.Operands.Length - 1)
 					sb.Append(", ");
 			}
 

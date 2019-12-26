@@ -12,8 +12,8 @@ namespace BlitzLensLib.Structures
 
 		protected byte[] RawCode;
 		protected Dictionary<string, uint> Symbols;
-		protected Dictionary<uint, string> SymbolNames;
-		protected Dictionary<string, string> SymbolRemap;
+		protected Dictionary<uint, List<string>> SymbolNames;
+		//protected Dictionary<string, string> SymbolRemap;
 		protected Dictionary<uint, string> RelativeRelocs;
 		protected Dictionary<uint, string> AbsoluteRelocs;
 
@@ -27,8 +27,8 @@ namespace BlitzLensLib.Structures
 		private CodeResource(BlitzLens decompiler)
 		{
 			Symbols = new Dictionary<string, uint>();
-			SymbolNames = new Dictionary<uint, string>();
-			SymbolRemap = new Dictionary<string, string>();
+			SymbolNames = new Dictionary<uint, List<string>>();
+			//SymbolRemap = new Dictionary<string, string>();
 			RelativeRelocs = new Dictionary<uint, string>();
 			AbsoluteRelocs = new Dictionary<uint, string>();
 			Imports = new Dictionary<string, uint>();
@@ -65,14 +65,22 @@ namespace BlitzLensLib.Structures
 				{
 					string name = br.ReadCString();
 					uint addr = br.ReadUInt32();
-					if (Symbols.ContainsValue(addr))
+					/*if (Symbols.ContainsValue(addr))
 					{
 						SymbolRemap.Add(name, SymbolNames[addr]);
 						continue;
-					}
+					}*/
 
-					Symbols.Add(name, addr);
-					SymbolNames.Add(addr, name);
+					if (!Symbols.ContainsKey(name))
+						Symbols.Add(name, addr);
+					else if (Symbols[name] != addr)
+						throw new Exception("Duplicate Symbol: " + name);
+					if (!SymbolNames.ContainsKey(addr))
+						SymbolNames.Add(addr, new List<string>());
+
+					if (SymbolNames[addr].Contains(name))
+						throw new Exception("Duplicate Symbol Use: " + name);
+					SymbolNames[addr].Add(name);
 				}
 
 				int relRelocCount = br.ReadInt32();
@@ -80,8 +88,8 @@ namespace BlitzLensLib.Structures
 				{
 					string sym = br.ReadCString();
 					uint offset = br.ReadUInt32();
-					if (SymbolRemap.ContainsKey(sym))
-						sym = SymbolRemap[sym];
+					//if (SymbolRemap.ContainsKey(sym))
+					//	sym = SymbolRemap[sym];
 					RelativeRelocs.Add(offset, sym);
 				}
 
@@ -90,8 +98,8 @@ namespace BlitzLensLib.Structures
 				{
 					string sym = br.ReadCString();
 					uint offset = br.ReadUInt32();
-					if (SymbolRemap.ContainsKey(sym))
-						sym = SymbolRemap[sym];
+					//if (SymbolRemap.ContainsKey(sym))
+					//	sym = SymbolRemap[sym];
 					AbsoluteRelocs.Add(offset, sym);
 				}
 			}
@@ -185,11 +193,19 @@ namespace BlitzLensLib.Structures
 			return Symbols.Keys.ToArray();
 		}
 
-		public string GetSymbolName(uint address)
+		public List<string> GetSymbolNames(uint address)
 		{
 			if (!SymbolNames.ContainsKey(address))
 				return null;
 			return SymbolNames[address];
+		}
+
+		public string GetSymbolName(uint address)
+		{
+			List<string> syms = GetSymbolNames(address);
+			if (syms != null && syms.Count > 0)
+				return syms[0];
+			return null;
 		}
 
 		public string GetAnyName(uint address)
