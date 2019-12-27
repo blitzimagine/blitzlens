@@ -99,8 +99,8 @@ namespace BlitzLensLib.Utils
 			{
 				if (data[i] == 0)
 					break;
-				if (data[i] == '\\')
-					sb.Append('\\');
+				//if (data[i] == '\\')
+				//	sb.Append('\\');
 				sb.Append((char)data[i]);
 			}
 
