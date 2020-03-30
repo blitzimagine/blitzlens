@@ -72,6 +72,20 @@ namespace BlitzLensLib.Utils
 			return result.ToArray();
 		}
 
+		public static string ToHexString(float f)
+		{
+			var bytes = BitConverter.GetBytes(f);
+			var i = BitConverter.ToInt32(bytes, 0);
+			return i.ToString("X2");
+		}
+
+		public static float FromHexString(string s)
+		{
+			var i = Convert.ToInt32(s, 16);
+			var bytes = BitConverter.GetBytes(i);
+			return BitConverter.ToSingle(bytes, 0);
+		}
+
 		public static bool IsDigitString(string s)
 		{
 			foreach (char c in s)
@@ -301,7 +315,8 @@ namespace BlitzLensLib.Utils
 							sb.Append("    .dd 0x" + br.ReadUInt32().ToString("X2"));
 							break;
 						case DataType.Float:
-							sb.Append("    .dd 0x" + br.ReadSingle().ToString("X2"));
+							float f = br.ReadSingle();
+							sb.Append("    .dd " + f.ToString());//0x" + ToHexString(br.ReadSingle()));
 							break;
 						case DataType.CString:
 							uint cstringOff = br.ReadUInt32();
